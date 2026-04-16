@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+.venv/
+*.egg-info/
+
+# Flask
+instance/
+.webassets-cache
+
+# Banco de dados
+*.db
+*.sqlite
+*.sqlite3
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# SO
+.DS_Store
+Thumbs.db
+
+# Claude
+.claude/

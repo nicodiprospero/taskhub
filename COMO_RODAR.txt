@@ -1,0 +1,130 @@
+============================================================
+TASKHUB - GUIA RAPIDO PARA A APRESENTACAO
+============================================================
+
+LOCALIZACAO DO PROJETO
+------------------------------------------------------------
+C:\Users\User\Downloads\taskhub\
+
+
+COMO RODAR NO SEU NOTEBOOK (ja configurado)
+------------------------------------------------------------
+1. Abrir PowerShell ou CMD na pasta:
+     cd C:\Users\User\Downloads\taskhub
+
+2. (Opcional, mas recomendado antes da apresentacao)
+   Rodar o seed para zerar o banco e criar Alice + Bob com
+   tarefas prontas para a demo:
+     python seed.py
+
+3. Iniciar o servidor:
+     python run.py
+
+4. Abrir no navegador:
+     http://127.0.0.1:5000
+
+Para parar o servidor: Ctrl + C no terminal.
+
+
+COMO RODAR EM OUTRO COMPUTADOR (laboratorio, etc)
+------------------------------------------------------------
+1. Copiar a pasta taskhub inteira (pendrive/drive/git)
+
+2. Ter Python 3.10+ instalado
+
+3. No terminal, dentro da pasta:
+     pip install -r requirements.txt
+     python seed.py
+     python run.py
+
+4. Acessar http://127.0.0.1:5000
+
+
+CREDENCIAIS DE DEMO (apos rodar seed.py)
+------------------------------------------------------------
+ALICE (vitima do ataque IDOR)
+  email: alice@taskhub.com
+  senha: 123456
+
+BOB (atacante da demo)
+  email: bob@taskhub.com
+  senha: 123456
+
+
+ROTEIRO RAPIDO DA DEMO IDOR
+------------------------------------------------------------
+1. Rodar  python seed.py
+2. Rodar  python run.py
+3. Abrir 2 abas no navegador (uma normal, outra anonima)
+
+4. ABA 1 - ALICE:
+     Login com alice@taskhub.com / 123456
+     Mostrar a tarefa "Senha do servidor de producao"
+     Clicar em Editar -> mostrar URL: /tasks/edit/1
+     (o id vai sair impresso quando rodar o seed)
+
+5. ABA 2 (anonima) - BOB:
+     Login com bob@taskhub.com / 123456
+     Clicar em Editar em qualquer tarefa dele -> URL /tasks/edit/4
+     Trocar manualmente na barra de endereco para /tasks/edit/1
+     >>> AGORA BOB VE A TAREFA SECRETA DA ALICE <<<
+     Trocar o titulo para qualquer coisa e salvar (prova o impacto)
+
+6. CORRECAO AO VIVO:
+   Abrir app/tasks/routes.py no editor
+   Na funcao edit(), trocar:
+       task = Task.query.get_or_404(task_id)
+   Por:
+       task = Task.query.filter_by(
+           id=task_id, user_id=current_user.id
+       ).first_or_404()
+   Salvar -> Flask recarrega sozinho (modo debug)
+
+7. Tentar de novo na aba do Bob: /tasks/edit/1 -> 404 Not Found
+   Vulnerabilidade corrigida!
+
+
+ARQUIVOS IMPORTANTES
+------------------------------------------------------------
+run.py              -> ponto de entrada
+seed.py             -> popula banco com dados de demo
+config.py           -> configs (SECRET_KEY, URI do banco)
+app/__init__.py     -> app factory + extensions
+app/models.py       -> User e Task
+app/auth/           -> blueprint de autenticacao
+app/tasks/          -> blueprint de tarefas (CONTEM A VULN EM routes.py)
+app/templates/      -> HTML (base + auth + tasks)
+app/static/style.css-> CSS customizado
+taskhub.db          -> banco SQLite (gerado automaticamente)
+
+RELATORIO.md        -> relatorio para entregar (preencher prints)
+APRESENTACAO.md     -> roteiro completo das falas (4 pessoas)
+
+
+CHECKLIST 30 MIN ANTES DA APRESENTACAO
+------------------------------------------------------------
+[ ] Python instalado no PC que vai usar
+[ ] pip install -r requirements.txt ja rodado sem erro
+[ ] python seed.py executado (banco com Alice + Bob)
+[ ] python run.py testado - abre em 127.0.0.1:5000
+[ ] Ids das tarefas da Alice anotados (saem no seed.py)
+[ ] VS Code aberto com routes.py, __init__.py e models.py em abas
+[ ] Fonte do terminal e do editor aumentada (Ctrl + +)
+[ ] Navegador com 2 abas abertas (uma anonima para o Bob)
+[ ] Plano B: video de 30s gravado do ataque, caso de problema
+
+
+DICAS FINAIS
+------------------------------------------------------------
+- O Flask roda em modo DEBUG, entao salvar qualquer arquivo
+  reinicia o servidor sozinho. Util para a correcao ao vivo.
+
+- Se esquecer que tarefas existem e os ids, rodar de novo:
+     python seed.py
+  (isso RESETA o banco - todas as contas criadas a mao somem)
+
+- Se der erro 500 durante a demo, olhar o terminal: o Flask
+  mostra o traceback completo ali.
+
+- Se esquecer de fazer login e o navegador redirecionar para
+  /auth/login, e normal - as rotas de tarefa sao protegidas.

@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>&#128203; Minhas Tarefas</h1>
+        <p class="page-subtitle">{{ tasks|length }} tarefa(s) encontrada(s)</p>
+    </div>
+    <a href="{{ url_for('tasks.create') }}" class="btn btn-primary">+ Nova Tarefa</a>
+</div>
+
+<!-- Search + View Toggle -->
+<div class="toolbar">
+    <form method="GET" action="{{ url_for('tasks.index') }}" class="search-form">
+        <div class="search-wrapper">
+            <input
+                type="text"
+                name="search"
+                class="form-control search-input"
+                placeholder="Buscar tarefas..."
+                value="{{ search }}"
+            >
+            <button type="submit" class="btn btn-primary">Buscar</button>
+            {% if search %}
+                <a href="{{ url_for('tasks.index') }}" class="btn btn-ghost">Limpar</a>
+            {% endif %}
+        </div>
+    </form>
+
+    <div class="view-toggle">
+        <a href="{{ url_for('tasks.set_view', mode='list') }}"
+           class="btn btn-sm {% if view_mode == 'list' %}btn-primary{% else %}btn-ghost{% endif %}">
+            &#9776; Lista
+        </a>
+        <a href="{{ url_for('tasks.set_view', mode='kanban') }}"
+           class="btn btn-sm {% if view_mode == 'kanban' %}btn-primary{% else %}btn-ghost{% endif %}">
+            &#9707; Kanban
+        </a>
+    </div>
+</div>
+
+{% if search %}
+<div class="search-info">
+    Resultados para: <strong>"{{ search }}"</strong>
+</div>
+{% endif %}
+
+{% if tasks %}
+    {% if view_mode == 'kanban' %}
+    <!-- KANBAN VIEW -->
+    <div class="kanban-board">
+        {% set statuses = [('pending', 'Pendente'), ('in_progress', 'Em Progresso'), ('done', 'Concluída')] %}
+        {% for status_key, status_label in statuses %}
+        <div class="kanban-column">
+            <div class="kanban-header kanban-{{ status_key }}">
+                <span>{{ status_label }}</span>
+                <span class="kanban-count">
+                    {{ tasks | selectattr('status', 'equalto', status_key) | list | length }}
+                </span>
+            </div>
+            <div class="kanban-cards">
+                {% for task in tasks if task.status == status_key %}
+                    <div class="task-card priority-{{ task.priority }}">
+                        <div class="task-card-header">
+                            <span class="priority-badge priority-{{ task.priority }}">
+                                {% if task.priority == 'high' %}&#9650; Alta
+                                {% elif task.priority == 'medium' %}&#9654; Média
+                                {% else %}&#9660; Baixa{% endif %}
+                            </span>
+                        </div>
+                        <h3 class="task-title">{{ task.title }}</h3>
+                        {% if task.description %}
+                            <p class="task-desc">{{ task.description[:80] }}{% if task.description|length > 80 %}...{% endif %}</p>
+                        {% endif %}
+                        <div class="task-meta">
+                            <span class="task-date">{{ task.created_at.strftime('%d/%m/%Y') }}</span>
+                        </div>
+                        <div class="task-actions">
+                            <a href="{{ url_for('tasks.edit', task_id=task.id) }}" class="btn btn-sm btn-ghost">Editar</a>
+                            <form method="POST" action="{{ url_for('tasks.delete', task_id=task.id) }}" class="inline-form"
+                                  onsubmit="return confirm('Excluir esta tarefa?')">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-sm btn-danger">Excluir</button>
+                            </form>
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="kanban-empty">Nenhuma tarefa</div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% else %}
+    <!-- LIST VIEW -->
+    <div class="task-list">
+        {% for task in tasks %}
+        <div class="task-row priority-border-{{ task.priority }}">
+            <div class="task-row-main">
+                <div class="task-row-info">
+                    <h3 class="task-title">{{ task.title }}</h3>
+                    {% if task.description %}
+                        <p class="task-desc">{{ task.description[:100] }}{% if task.description|length > 100 %}...{% endif %}</p>
+                    {% endif %}
+                    <div class="task-meta">
+                        <span class="status-badge status-{{ task.status }}">
+                            {% if task.status == 'pending' %}Pendente
+                            {% elif task.status == 'in_progress' %}Em Progresso
+                            {% else %}Concluída{% endif %}
+                        </span>
+                        <span class="priority-badge priority-{{ task.priority }}">
+                            {% if task.priority == 'high' %}&#9650; Alta
+                            {% elif task.priority == 'medium' %}&#9654; Média
+                            {% else %}&#9660; Baixa{% endif %}
+                        </span>
+                        <span class="task-date">{{ task.created_at.strftime('%d/%m/%Y %H:%M') }}</span>
+                    </div>
+                </div>
+                <div class="task-actions">
+                    <a href="{{ url_for('tasks.edit', task_id=task.id) }}" class="btn btn-sm btn-ghost">Editar</a>
+                    <form method="POST" action="{{ url_for('tasks.delete', task_id=task.id) }}" class="inline-form"
+                          onsubmit="return confirm('Tem certeza que deseja excluir esta tarefa?')">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-sm btn-danger">Excluir</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+{% else %}
+    <div class="empty-state">
+        <div class="empty-icon">&#128203;</div>
+        <h2>Nenhuma tarefa encontrada</h2>
+        {% if search %}
+            <p>Nenhum resultado para "<strong>{{ search }}</strong>".</p>
+            <a href="{{ url_for('tasks.index') }}" class="btn btn-ghost">Ver todas as tarefas</a>
+        {% else %}
+            <p>Você ainda não tem tarefas. Crie sua primeira agora!</p>
+            <a href="{{ url_for('tasks.create') }}" class="btn btn-primary">+ Criar Tarefa</a>
+        {% endif %}
+    </div>
+{% endif %}
+{% endblock %}
