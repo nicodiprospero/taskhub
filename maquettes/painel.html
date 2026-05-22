@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Smart Maquette</title>
+<style>
+  :root {
+    --bg:       #0f1117;
+    --surface:  #1a1d27;
+    --card:     #21253a;
+    --border:   #2e3347;
+    --accent:   #6c63ff;
+    --accent2:  #a78bfa;
+    --on:       #22c55e;
+    --off:      #374151;
+    --text:     #e2e8f0;
+    --muted:    #64748b;
+    --danger:   #ef4444;
+    --radius:   14px;
+    --radius-sm: 8px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding-bottom: 32px;
+  }
+
+  /* ── Header ── */
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 20px 24px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+  }
+  header h1 {
+    font-size: 1.15rem;
+    font-weight: 700;
+    letter-spacing: -.3px;
+  }
+  header h1 span { color: var(--accent2); }
+
+  /* Connection dot */
+  #conn-dot {
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    background: var(--danger);
+    display: inline-block;
+    margin-right: 7px;
+    transition: background .4s;
+  }
+  #conn-dot.ok { background: var(--on); box-shadow: 0 0 6px var(--on); }
+  #conn-label { font-size: 0.78rem; color: var(--muted); }
+
+  /* ── Global actions ── */
+  .global-bar {
+    max-width: 900px;
+    margin: 24px auto 0;
+    padding: 0 16px;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 20px;
+    border-radius: var(--radius-sm);
+    font-size: 0.85rem;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: opacity .15s, transform .1s;
+  }
+  .btn:active { transform: scale(.97); }
+  .btn-on     { background: var(--on);     color: #fff; }
+  .btn-off    { background: var(--off);    color: var(--text); }
+  .btn-accent { background: var(--accent); color: #fff; }
+  .btn:hover  { opacity: .85; }
+
+  /* ── Grid ── */
+  .grid {
+    max-width: 900px;
+    margin: 20px auto 0;
+    padding: 0 16px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 14px;
+  }
+
+  /* ── Zone card ── */
+  .zone {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px 18px 16px;
+    transition: border-color .2s;
+  }
+  .zone.active {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent), 0 4px 20px rgba(108,99,255,.15);
+  }
+
+  .zone-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+
+  .zone-name {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+  }
+  .zone-icon {
+    font-size: 1.2rem;
+    line-height: 1;
+  }
+  .zone-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+  }
+  .zone-sub {
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin-top: 1px;
+  }
+
+  /* Toggle switch */
+  .toggle {
+    position: relative;
+    width: 46px;
+    height: 26px;
+    flex-shrink: 0;
+  }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .toggle-track {
+    position: absolute;
+    inset: 0;
+    background: var(--off);
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background .25s;
+  }
+  .toggle input:checked + .toggle-track { background: var(--on); }
+  .toggle-track::after {
+    content: '';
+    position: absolute;
+    left: 3px; top: 3px;
+    width: 20px; height: 20px;
+    background: #fff;
+    border-radius: 50%;
+    transition: transform .25s;
+    box-shadow: 0 1px 4px rgba(0,0,0,.3);
+  }
+  .toggle input:checked + .toggle-track::after { transform: translateX(20px); }
+
+  /* Brightness row */
+  .brightness-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .brightness-label {
+    font-size: 0.72rem;
+    color: var(--muted);
+    white-space: nowrap;
+    min-width: 28px;
+    text-align: right;
+  }
+
+  /* Slider */
+  input[type=range] {
+    -webkit-appearance: none;
+    flex: 1;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--border);
+    outline: none;
+    cursor: pointer;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: var(--accent2);
+    border: 2px solid #fff;
+    box-shadow: 0 1px 4px rgba(0,0,0,.3);
+    cursor: pointer;
+    transition: background .15s;
+  }
+  input[type=range]::-webkit-slider-thumb:hover { background: var(--accent); }
+  .zone.active input[type=range] {
+    background: linear-gradient(to right, var(--accent) var(--pct, 0%), var(--border) var(--pct, 0%));
+  }
+
+  /* ── PWM readout bar ── */
+  .pwm-bar-wrap {
+    height: 3px;
+    background: var(--border);
+    border-radius: 2px;
+    margin-top: 10px;
+    overflow: hidden;
+  }
+  .pwm-bar {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width .15s;
+  }
+
+  /* ── Footer ── */
+  footer {
+    text-align: center;
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin-top: 36px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>⚡ Smart <span>Maquette</span></h1>
+  <div>
+    <span id="conn-dot"></span>
+    <span id="conn-label">desconectado</span>
+  </div>
+</header>
+
+<!-- Global controls -->
+<div class="global-bar">
+  <button class="btn btn-on"  onclick="allOn()">☀️ Tudo Ligado</button>
+  <button class="btn btn-off" onclick="allOff()">🌙 Tudo Desligado</button>
+  <button class="btn btn-accent" onclick="sceneNight()">🌆 Modo Noturno</button>
+</div>
+
+<!-- Zone grid -->
+<div class="grid" id="grid"></div>
+
+<footer>ESP32 WebSocket · ws://&lt;ip&gt;/ws</footer>
+
+<script>
+// ── Zone definitions — edit names/icons to match your maquette ──
+const ZONES = [
+  { id: 1, name: 'Sala Principal',  icon: '🏛️' },
+  { id: 2, name: 'Corredor',        icon: '🚪' },
+  { id: 3, name: 'Quarto 1',        icon: '🛏️' },
+  { id: 4, name: 'Quarto 2',        icon: '🛏️' },
+  { id: 5, name: 'Cozinha',         icon: '🍳' },
+  { id: 6, name: 'Área Externa',    icon: '🌿' },
+  { id: 7, name: 'Garagem',         icon: '🚗' },
+  { id: 8, name: 'Fachada',         icon: '🏠' },
+];
+
+// ── State ──
+const state = {};
+ZONES.forEach(z => { state[z.id] = { on: false, pwm: 200 }; });
+
+// ── Build UI ──
+const grid = document.getElementById('grid');
+ZONES.forEach(z => {
+  const card = document.createElement('div');
+  card.className = 'zone';
+  card.id = `zone-${z.id}`;
+  card.innerHTML = `
+    <div class="zone-top">
+      <div class="zone-name">
+        <span class="zone-icon">${z.icon}</span>
+        <div>
+          <div class="zone-title">${z.name}</div>
+          <div class="zone-sub">Canal ${z.id}</div>
+        </div>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="tog-${z.id}" onchange="toggleZone(${z.id})">
+        <span class="toggle-track"></span>
+      </label>
+    </div>
+    <div class="brightness-row">
+      <span style="font-size:.72rem;color:var(--muted)">🔆</span>
+      <input type="range" id="sldr-${z.id}" min="0" max="255" value="200"
+             oninput="updatePWM(${z.id}, this.value)">
+      <span class="brightness-label" id="pct-${z.id}">78%</span>
+    </div>
+    <div class="pwm-bar-wrap">
+      <div class="pwm-bar" id="bar-${z.id}" style="width:78%"></div>
+    </div>
+  `;
+  grid.appendChild(card);
+});
+
+// ── WebSocket ──
+let ws;
+const connDot   = document.getElementById('conn-dot');
+const connLabel = document.getElementById('conn-label');
+
+function connect() {
+  const host = location.hostname || '192.168.1.100'; // fallback IP
+  ws = new WebSocket(`ws://${host}/ws`);
+
+  ws.onopen = () => {
+    connDot.classList.add('ok');
+    connLabel.textContent = 'conectado';
+    ws.send(JSON.stringify({ cmd: 'getAll' })); // request full state on connect
+  };
+
+  ws.onclose = () => {
+    connDot.classList.remove('ok');
+    connLabel.textContent = 'reconectando…';
+    setTimeout(connect, 2500);
+  };
+
+  ws.onerror = () => ws.close();
+
+  ws.onmessage = (e) => {
+    try {
+      const msg = JSON.parse(e.data);
+      // single channel update: { ch, on, pwm }
+      if (msg.ch !== undefined) applyState(msg.ch, msg.on, msg.pwm);
+      // full state dump: { all: [{ch,on,pwm}, …] }
+      if (msg.all) msg.all.forEach(m => applyState(m.ch, m.on, m.pwm));
+    } catch(_) {}
+  };
+}
+
+function send(payload) {
+  if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(payload));
+}
+
+// ── Apply state to UI ──
+function applyState(ch, on, pwm) {
+  state[ch] = { on, pwm };
+  const card  = document.getElementById(`zone-${ch}`);
+  const tog   = document.getElementById(`tog-${ch}`);
+  const sldr  = document.getElementById(`sldr-${ch}`);
+  const bar   = document.getElementById(`bar-${ch}`);
+  const pct   = document.getElementById(`pct-${ch}`);
+  if (!card) return;
+
+  tog.checked = on;
+  sldr.value  = pwm;
+  const p = Math.round(pwm / 255 * 100);
+  bar.style.width = p + '%';
+  pct.textContent = p + '%';
+  sldr.style.setProperty('--pct', p + '%');
+  card.classList.toggle('active', on);
+}
+
+// ── User actions ──
+function toggleZone(ch) {
+  const on = document.getElementById(`tog-${ch}`).checked;
+  const pwm = state[ch].pwm;
+  applyState(ch, on, pwm);
+  send({ ch, on, pwm });
+}
+
+function updatePWM(ch, rawVal) {
+  const pwm = parseInt(rawVal);
+  const on  = state[ch].on;
+  applyState(ch, on, pwm);
+  send({ ch, on, pwm });
+}
+
+function allOn() {
+  ZONES.forEach(z => {
+    applyState(z.id, true, state[z.id].pwm);
+    send({ ch: z.id, on: true, pwm: state[z.id].pwm });
+  });
+}
+
+function allOff() {
+  ZONES.forEach(z => {
+    applyState(z.id, false, state[z.id].pwm);
+    send({ ch: z.id, on: false, pwm: state[z.id].pwm });
+  });
+}
+
+function sceneNight() {
+  // fachada + área externa full, quartos em 30%, resto off
+  const profile = { 1:0, 2:0, 3:77, 4:77, 5:0, 6:255, 7:0, 8:255 };
+  ZONES.forEach(z => {
+    const pwm = profile[z.id];
+    const on  = pwm > 0;
+    applyState(z.id, on, pwm || state[z.id].pwm);
+    send({ ch: z.id, on, pwm: pwm || state[z.id].pwm });
+  });
+}
+
+// ── Start ──
+connect();
+</script>
+</body>
+</html>
