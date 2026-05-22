@@ -1,0 +1,1056 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TaskHub — Maquettes</title>
+  <style>
+    :root {
+      --primary: #4f46e5; --primary-dark: #3730a3; --primary-light: #e0e7ff;
+      --danger: #ef4444; --danger-light: #fee2e2;
+      --success: #22c55e; --success-light: #dcfce7;
+      --warning: #f59e0b; --warning-light: #fef3c7;
+      --info: #3b82f6; --info-light: #dbeafe;
+      --priority-high: #ef4444; --priority-medium: #f59e0b; --priority-low: #22c55e;
+      --bg: #f8fafc; --surface: #ffffff; --surface-2: #f1f5f9;
+      --border: #e2e8f0; --border-focus: #4f46e5;
+      --text: #0f172a; --text-muted: #64748b; --text-light: #94a3b8;
+      --radius: 8px; --radius-lg: 12px;
+      --shadow: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.06);
+      --shadow-md: 0 4px 6px rgba(0,0,0,.07), 0 2px 4px rgba(0,0,0,.06);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #e2e8f0;
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    /* ─── Section dividers ─── */
+    .screen-label {
+      background: var(--text);
+      color: #fff;
+      padding: 14px 32px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      position: sticky;
+      top: 0;
+      z-index: 200;
+    }
+    .screen-label span { opacity: .55; font-weight: 400; text-transform: none; letter-spacing: 0; font-size: 0.85rem; }
+    .screen-label .nav-pill {
+      margin-left: auto;
+      display: flex;
+      gap: 8px;
+    }
+    .screen-label .nav-pill a {
+      color: rgba(255,255,255,.6);
+      font-size: 0.78rem;
+      text-decoration: none;
+      padding: 3px 10px;
+      border: 1px solid rgba(255,255,255,.2);
+      border-radius: 99px;
+      transition: background .15s, color .15s;
+      letter-spacing: 0;
+      text-transform: none;
+      font-weight: 500;
+    }
+    .screen-label .nav-pill a:hover { background: rgba(255,255,255,.15); color: #fff; }
+
+    /* ─── TOC ─── */
+    #toc {
+      background: var(--surface);
+      border-bottom: 3px solid var(--primary);
+      padding: 40px 32px;
+    }
+    #toc h1 { font-size: 1.5rem; font-weight: 800; color: var(--text); margin-bottom: 4px; }
+    #toc p  { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 28px; }
+    .toc-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 12px;
+    }
+    .toc-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      text-decoration: none;
+      color: var(--text);
+      font-size: 0.875rem;
+      font-weight: 500;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .toc-item:hover { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(79,70,229,.1); }
+    .toc-num {
+      background: var(--primary-light);
+      color: var(--primary);
+      font-size: 0.75rem;
+      font-weight: 700;
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+
+    /* ─── Screen wrapper ─── */
+    .screen {
+      background: var(--bg);
+      min-height: 100vh;
+    }
+
+    /* ══════════════════════════════
+       SHARED COMPONENTS
+    ══════════════════════════════ */
+
+    /* Navbar */
+    .s-nav {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      box-shadow: var(--shadow);
+    }
+    .s-nav-inner {
+      max-width: 1200px; margin: 0 auto;
+      padding: 0 24px; height: 60px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .s-nav-brand { font-size: 1.2rem; font-weight: 700; color: var(--primary); text-decoration: none; }
+    .s-nav-actions { display: flex; align-items: center; gap: 10px; }
+    .s-nav-user { font-size: 0.9rem; color: var(--text-muted); }
+    .s-nav-user strong { color: var(--text); }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 16px; border-radius: var(--radius);
+      font-size: 0.875rem; font-weight: 500;
+      cursor: pointer; border: 1px solid transparent; text-decoration: none;
+      transition: background .15s, color .15s;
+    }
+    .btn-primary { background: var(--primary); color: #fff; border-color: var(--primary); }
+    .btn-primary:hover { background: var(--primary-dark); border-color: var(--primary-dark); }
+    .btn-ghost { background: transparent; color: var(--text-muted); border-color: var(--border); }
+    .btn-ghost:hover { background: var(--surface-2); color: var(--text); }
+    .btn-danger { background: var(--danger); color: #fff; border-color: var(--danger); }
+    .btn-danger:hover { background: #dc2626; }
+    .btn-sm { padding: 5px 12px; font-size: 0.8rem; }
+    .btn-block { width: 100%; justify-content: center; padding: 11px 16px; font-size: 0.95rem; }
+
+    /* Main content area */
+    .s-main { max-width: 1200px; margin: 0 auto; padding: 32px 24px; }
+    .s-main-center { max-width: 1200px; margin: 0 auto; padding: 48px 24px; display: flex; align-items: center; justify-content: center; }
+
+    /* Footer */
+    .s-footer {
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      padding: 16px 24px;
+      text-align: center;
+      font-size: 0.8rem;
+      color: var(--text-light);
+    }
+
+    /* ─── Auth Card ─── */
+    .auth-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-md);
+      padding: 42px 40px 36px;
+      width: 100%; max-width: 420px;
+    }
+    .auth-card-header { text-align: center; margin-bottom: 30px; }
+    .auth-card-header h2 { font-size: 1.6rem; font-weight: 700; }
+    .auth-card-header p { margin-top: 8px; color: var(--text-muted); font-size: 0.9rem; }
+    .auth-footer { text-align: center; margin-top: 22px; padding-top: 20px; border-top: 1px solid var(--border); font-size: 0.875rem; color: var(--text-muted); }
+    .auth-footer a { color: var(--primary); font-weight: 500; text-decoration: none; }
+
+    /* ─── Form ─── */
+    .form-group { margin-bottom: 20px; }
+    .form-group:last-child { margin-bottom: 0; }
+    .form-label { display: block; margin-bottom: 6px; font-size: 0.875rem; font-weight: 600; color: var(--text); }
+    .form-control {
+      display: block; width: 100%;
+      padding: 10px 14px;
+      border: 1px solid var(--border); border-radius: var(--radius);
+      font-size: 0.9rem; color: var(--text); background: var(--surface);
+      outline: none; font-family: inherit;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .form-control:focus { border-color: var(--border-focus); box-shadow: 0 0 0 3px rgba(79,70,229,.12); }
+    .form-control::placeholder { color: var(--text-light); }
+    textarea.form-control { resize: vertical; min-height: 100px; line-height: 1.5; }
+    select.form-control {
+      cursor: pointer; appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%2394a3b8' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 12px center; padding-right: 36px;
+    }
+    .form-hint { margin-top: 5px; font-size: 0.78rem; color: var(--text-light); }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .form-actions { display: flex; align-items: center; gap: 12px; padding-top: 8px; margin-top: 8px; border-top: 1px solid var(--border); }
+    .form-control.field-sensitive { border-color: #fca5a5; background: #fff5f5; }
+
+    /* Form card */
+    .form-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-md);
+      padding: 36px 40px;
+      max-width: 600px;
+    }
+    .form-card.danger-border { border: 2px solid #fca5a5; box-shadow: 0 0 0 4px rgba(239,68,68,.06), var(--shadow-md); }
+    .form-card-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: var(--danger-light); color: #991b1b;
+      border-radius: var(--radius); padding: 4px 12px;
+      font-size: 0.78rem; font-weight: 700;
+      margin-bottom: 20px;
+    }
+
+    /* Page header */
+    .page-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 24px; flex-wrap: wrap; gap: 12px;
+    }
+    .page-header h2 { font-size: 1.5rem; font-weight: 700; }
+    .page-header p { margin-top: 4px; color: var(--text-muted); font-size: 0.9rem; }
+    .back-link {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 0.875rem; color: var(--text-muted); text-decoration: none;
+      margin-bottom: 18px; transition: color .15s;
+    }
+    .back-link:hover { color: var(--primary); }
+    .page-title { font-size: 1.5rem; font-weight: 700; margin-bottom: 28px; }
+
+    /* Toolbar */
+    .toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+    .search-wrap { flex: 1; min-width: 200px; position: relative; }
+    .search-input {
+      width: 100%; padding: 9px 14px 9px 36px;
+      border: 1px solid var(--border); border-radius: var(--radius);
+      font-size: 0.875rem; background: var(--surface); color: var(--text);
+      outline: none;
+    }
+    .search-input::placeholder { color: var(--text-light); }
+    .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-light); pointer-events: none; }
+    .view-toggle { display: flex; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+    .view-btn {
+      padding: 8px 16px; font-size: 0.82rem; font-weight: 500;
+      cursor: pointer; border: none; text-decoration: none;
+      display: inline-flex; align-items: center; gap: 4px;
+    }
+    .view-btn.active { background: var(--primary); color: #fff; }
+    .view-btn:not(.active) { background: var(--surface); color: var(--text-muted); }
+
+    /* Badges */
+    .badge {
+      display: inline-flex; align-items: center;
+      padding: 3px 10px; border-radius: 999px;
+      font-size: 0.74rem; font-weight: 600;
+    }
+    .badge-pending   { background: var(--warning-light); color: #92400e; }
+    .badge-progress  { background: var(--info-light);    color: #1e40af; }
+    .badge-done      { background: var(--success-light); color: #14532d; }
+    .badge-high      { background: var(--danger-light);  color: #991b1b; }
+    .badge-medium    { background: var(--warning-light); color: #92400e; }
+    .badge-low       { background: var(--success-light); color: #14532d; }
+
+    /* Task list */
+    .task-list { display: flex; flex-direction: column; gap: 10px; }
+    .task-row {
+      background: var(--surface);
+      border: 1px solid var(--border); border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      display: flex; align-items: center; overflow: hidden;
+      transition: box-shadow .15s;
+    }
+    .task-row:hover { box-shadow: var(--shadow-md); }
+    .task-priority-bar { width: 4px; align-self: stretch; flex-shrink: 0; }
+    .task-body { flex: 1; padding: 14px 16px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+    .task-title { font-weight: 600; font-size: 0.95rem; flex: 1; min-width: 180px; }
+    .task-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .task-date { font-size: 0.8rem; color: var(--text-muted); white-space: nowrap; }
+    .task-actions { display: flex; gap: 8px; padding: 14px 16px; flex-shrink: 0; }
+
+    /* Kanban */
+    .kanban-board { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; align-items: start; }
+    .kanban-col { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+    .kanban-col-header {
+      padding: 14px 16px;
+      display: flex; align-items: center; justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+    }
+    .kanban-col-header h3 { font-size: 0.9rem; font-weight: 700; }
+    .col-count { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 999px; font-size: 0.75rem; font-weight: 700; }
+    .col-pending .kanban-col-header { background: var(--warning-light); } .col-pending h3 { color: #92400e; } .col-pending .col-count { background: var(--warning); color: #fff; }
+    .col-progress .kanban-col-header { background: var(--info-light); } .col-progress h3 { color: #1e40af; } .col-progress .col-count { background: var(--info); color: #fff; }
+    .col-done .kanban-col-header { background: var(--success-light); } .col-done h3 { color: #14532d; } .col-done .col-count { background: var(--success); color: #fff; }
+    .kanban-cards { padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+    .kanban-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 14px; transition: box-shadow .15s; }
+    .kanban-card:hover { box-shadow: var(--shadow-md); }
+    .kanban-card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+    .kanban-card-title { font-size: 0.88rem; font-weight: 600; margin-bottom: 6px; line-height: 1.4; }
+    .kanban-card-desc { font-size: 0.8rem; color: var(--text-muted); line-height: 1.45; margin-bottom: 10px; }
+    .kanban-card-footer { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+    .kanban-card-date { font-size: 0.76rem; color: var(--text-light); }
+    .kanban-card-actions { display: flex; gap: 6px; }
+
+    /* Danger zone */
+    .danger-zone { background: var(--surface); border: 1px solid #fca5a5; border-radius: var(--radius-lg); padding: 28px 40px; max-width: 600px; margin-top: 24px; }
+    .danger-zone-title { font-size: 1rem; font-weight: 700; color: var(--danger); margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+    .danger-zone-desc { font-size: 0.875rem; color: var(--text-muted); margin-bottom: 18px; line-height: 1.5; }
+
+    /* IDOR banners */
+    .banner { border-radius: var(--radius); padding: 14px 18px; margin-bottom: 16px; font-size: 0.9rem; display: flex; align-items: flex-start; gap: 10px; line-height: 1.5; }
+    .banner-danger { background: var(--danger-light); border: 1px solid #fca5a5; color: #7f1d1d; }
+    .banner-danger strong { color: var(--danger); }
+    .banner-success { background: var(--success-light); border: 1px solid #86efac; color: #14532d; }
+    .banner-success strong { color: #15803d; }
+    .banner code { padding: 2px 7px; border-radius: 4px; font-size: 0.85em; font-family: 'Courier New', monospace; }
+    .banner-danger code { background: #fde8e8; }
+    .banner-success code { background: #bbf7d0; color: #14532d; }
+
+    /* URL bar */
+    .url-bar { background: #1e1e2e; border-radius: var(--radius); padding: 12px 18px; margin-bottom: 16px; display: flex; align-items: center; gap: 12px; font-family: 'Courier New', monospace; }
+    .url-bar-label { font-size: 0.75rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: .05em; white-space: nowrap; }
+    .url-bar-url { font-size: 0.88rem; color: #a5f3fc; flex: 1; }
+    .url-bar-note { font-size: 0.78rem; white-space: nowrap; font-family: -apple-system, sans-serif; }
+    .url-bar-note.bad  { color: #fca5a5; }
+    .url-bar-note.good { color: #86efac; }
+
+    /* Victim badge */
+    .victim-badge { display: inline-flex; align-items: center; gap: 8px; background: #fef3c7; border: 1px solid #fcd34d; border-radius: var(--radius); padding: 8px 14px; font-size: 0.82rem; color: #78350f; margin-bottom: 20px; font-weight: 500; }
+
+    /* 404 */
+    .error-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-md); padding: 60px 40px; max-width: 520px; text-align: center; }
+    .error-code { font-size: 5rem; font-weight: 800; color: var(--border); line-height: 1; margin-bottom: 16px; letter-spacing: -3px; }
+    .error-title { font-size: 1.4rem; font-weight: 700; margin-bottom: 10px; }
+    .error-desc { font-size: 0.95rem; color: var(--text-muted); line-height: 1.6; margin-bottom: 32px; }
+
+    /* Code block */
+    .code-block { background: #0f172a; border-radius: var(--radius); padding: 20px 24px; max-width: 600px; margin-top: 32px; }
+    .code-block-title { font-size: 0.78rem; font-weight: 600; text-transform: uppercase; color: #64748b; letter-spacing: .06em; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+    .code-block pre { font-family: 'Courier New', monospace; font-size: 0.84rem; line-height: 1.7; color: #e2e8f0; white-space: pre-wrap; }
+    .code-before { color: #f87171; }
+    .code-after  { color: #86efac; }
+    .code-comment { color: #64748b; font-style: italic; }
+
+    /* Layout helpers */
+    .flex-col-center { display: flex; flex-direction: column; align-items: center; }
+    .mt-4 { margin-top: 32px; }
+
+    @media (max-width: 768px) {
+      .kanban-board { grid-template-columns: 1fr; }
+      .form-row { grid-template-columns: 1fr; }
+      .s-nav-user { display: none; }
+      .page-header { flex-direction: column; align-items: flex-start; }
+      .toolbar { flex-direction: column; align-items: stretch; }
+      .task-body { flex-direction: column; align-items: flex-start; gap: 8px; }
+      .task-actions { padding: 10px 16px 14px; }
+      .auth-card { padding: 28px 20px 24px; }
+      .form-card, .danger-zone { padding: 24px 20px; }
+      .error-card { padding: 40px 20px; }
+      .url-bar { flex-direction: column; align-items: flex-start; }
+      .toc-grid { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════════════════
+     TABLE OF CONTENTS
+══════════════════════════════ -->
+<div id="toc">
+  <h1>☰ TaskHub — Maquettes</h1>
+  <p>Mockups estáticos de todas as telas da aplicação. Clique para navegar.</p>
+  <div class="toc-grid">
+    <a href="#s1" class="toc-item"><span class="toc-num">1</span> Login</a>
+    <a href="#s2" class="toc-item"><span class="toc-num">2</span> Cadastro</a>
+    <a href="#s3" class="toc-item"><span class="toc-num">3</span> Lista de Tarefas</a>
+    <a href="#s4" class="toc-item"><span class="toc-num">4</span> Kanban</a>
+    <a href="#s5" class="toc-item"><span class="toc-num">5</span> Nova Tarefa</a>
+    <a href="#s6" class="toc-item"><span class="toc-num">6</span> Editar Tarefa</a>
+    <a href="#s7" class="toc-item"><span class="toc-num">7</span> IDOR — Vulnerável</a>
+    <a href="#s8" class="toc-item"><span class="toc-num">8</span> IDOR — Corrigido</a>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════
+     TELA 1 — LOGIN
+══════════════════════════════ -->
+<div id="s1">
+  <div class="screen-label">
+    01 — Login
+    <span>Tela de acesso à conta</span>
+    <div class="nav-pill">
+      <a href="#toc">↑ Topo</a>
+      <a href="#s2">Próxima →</a>
+    </div>
+  </div>
+  <div class="screen">
+    <div class="s-nav">
+      <div class="s-nav-inner">
+        <a class="s-nav-brand">☰ TaskHub</a>
+        <div class="s-nav-actions">
+          <a class="btn btn-primary btn-sm">Entrar</a>
+          <a class="btn btn-ghost btn-sm">Cadastrar</a>
+        </div>
+      </div>
+    </div>
+    <div class="s-main-center">
+      <div class="auth-card">
+        <div class="auth-card-header">
+          <h2>🔒 Entrar</h2>
+          <p>Acesse sua conta e gerencie suas tarefas</p>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input type="email" class="form-control" placeholder="seu@email.com">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Senha</label>
+          <input type="password" class="form-control" placeholder="Sua senha">
+        </div>
+        <div style="margin-top:24px;">
+          <button class="btn btn-primary btn-block">Entrar</button>
+        </div>
+        <div class="auth-footer">
+          Não tem uma conta? <a href="#s2">Cadastre-se gratuitamente</a>
+        </div>
+      </div>
+    </div>
+    <div class="s-footer">© 2025 TaskHub — Gerencie suas tarefas com eficiência.</div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════
+     TELA 2 — CADASTRO
+══════════════════════════════ -->
+<div id="s2">
+  <div class="screen-label">
+    02 — Cadastro
+    <span>Criação de nova conta</span>
+    <div class="nav-pill">
+      <a href="#s1">← Anterior</a>
+      <a href="#toc">↑ Topo</a>
+      <a href="#s3">Próxima →</a>
+    </div>
+  </div>
+  <div class="screen">
+    <div class="s-nav">
+      <div class="s-nav-inner">
+        <a class="s-nav-brand">☰ TaskHub</a>
+        <div class="s-nav-actions">
+          <a class="btn btn-ghost btn-sm">Entrar</a>
+          <a class="btn btn-primary btn-sm">Cadastrar</a>
+        </div>
+      </div>
+    </div>
+    <div class="s-main-center">
+      <div class="auth-card">
+        <div class="auth-card-header">
+          <h2>📝 Criar Conta</h2>
+          <p>Crie sua conta gratuitamente</p>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Usuário</label>
+          <input type="text" class="form-control" placeholder="seunome">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input type="email" class="form-control" placeholder="seu@email.com">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Senha</label>
+          <input type="password" class="form-control" placeholder="Mínimo 6 caracteres">
+          <p class="form-hint">A senha deve ter pelo menos 6 caracteres.</p>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Confirmar Senha</label>
+          <input type="password" class="form-control" placeholder="Repita sua senha">
+        </div>
+        <div style="margin-top:24px;">
+          <button class="btn btn-primary btn-block">Criar Conta</button>
+        </div>
+        <div class="auth-footer">
+          Já tem uma conta? <a href="#s1">Entrar</a>
+        </div>
+      </div>
+    </div>
+    <div class="s-footer">© 2025 TaskHub — Gerencie suas tarefas com eficiência.</div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════
+     TELA 3 — LISTA DE TAREFAS
+══════════════════════════════ -->
+<div id="s3">
+  <div class="screen-label">
+    03 — Lista de Tarefas
+    <span>Visualização em lista (modo padrão)</span>
+    <div class="nav-pill">
+      <a href="#s2">← Anterior</a>
+      <a href="#toc">↑ Topo</a>
+      <a href="#s4">Próxima →</a>
+    </div>
+  </div>
+  <div class="screen">
+    <div class="s-nav">
+      <div class="s-nav-inner">
+        <a class="s-nav-brand">☰ TaskHub</a>
+        <div class="s-nav-actions">
+          <span class="s-nav-user">Olá, <strong>alice</strong></span>
+          <a class="btn btn-primary btn-sm">+ Nova Tarefa</a>
+          <a class="btn btn-ghost btn-sm">Sair</a>
+        </div>
+      </div>
+    </div>
+    <div class="s-main">
+      <div class="page-header">
+        <div>
+          <h2>📋 Minhas Tarefas</h2>
+          <p>5 tarefa(s) encontrada(s)</p>
+        </div>
+        <a class="btn btn-primary">+ Nova Tarefa</a>
+      </div>
+      <div class="toolbar">
+        <div class="search-wrap">
+          <span class="search-icon">🔍</span>
+          <input type="search" class="search-input" placeholder="Buscar tarefas...">
+        </div>
+        <div class="view-toggle">
+          <button class="view-btn active">☰ Lista</button>
+          <a href="#s4" class="view-btn">⎓ Kanban</a>
+        </div>
+      </div>
+      <div class="task-list">
+        <!-- 1 -->
+        <div class="task-row">
+          <div class="task-priority-bar" style="background:var(--priority-high)"></div>
+          <div class="task-body">
+            <span class="task-title">Implementar autenticação OAuth</span>
+            <div class="task-meta">
+              <span class="badge badge-progress">Em Progresso</span>
+              <span class="badge badge-high">Alta</span>
+              <span class="task-date">📅 10/05/2025</span>
+            </div>
+          </div>
+          <div class="task-actions">
+            <a class="btn btn-ghost btn-sm">Editar</a>
+            <button class="btn btn-danger btn-sm">Excluir</button>
+          </div>
+        </div>
+        <!-- 2 -->
+        <div class="task-row">
+          <div class="task-priority-bar" style="background:var(--priority-high)"></div>
+          <div class="task-body">
+            <span class="task-title">Revisar relatório CP-2</span>
+            <div class="task-meta">
+              <span class="badge badge-pending">Pendente</span>
+              <span class="badge badge-high">Alta</span>
+              <span class="task-date">📅 12/05/2025</span>
+            </div>
+          </div>
+          <div class="task-actions">
+            <a class="btn btn-ghost btn-sm">Editar</a>
+            <button class="btn btn-danger btn-sm">Excluir</button>
+          </div>
+        </div>
+        <!-- 3 -->
+        <div class="task-row">
+          <div class="task-priority-bar" style="background:var(--priority-medium)"></div>
+          <div class="task-body">
+            <span class="task-title">Refatorar módulo de tarefas</span>
+            <div class="task-meta">
+              <span class="badge badge-progress">Em Progresso</span>
+              <span class="badge badge-medium">Média</span>
+              <span class="task-date">📅 14/05/2025</span>
+            </div>
+          </div>
+          <div class="task-actions">
+            <a class="btn btn-ghost btn-sm">Editar</a>
+            <button class="btn btn-danger btn-sm">Excluir</button>
+          </div>
+        </div>
+        <!-- 4 -->
+        <div class="task-row">
+          <div class="task-priority-bar" style="background:var(--priority-medium)"></div>
+          <div class="task-body">
+            <span class="task-title">Escrever testes unitários</span>
+            <div class="task-meta">
+              <span class="badge badge-pending">Pendente</span>
+              <span class="badge badge-medium">Média</span>
+              <span class="task-date">📅 16/05/2025</span>
+            </div>
+          </div>
+          <div class="task-actions">
+            <a class="btn btn-ghost btn-sm">Editar</a>
+            <button class="btn btn-danger btn-sm">Excluir</button>
+          </div>
+        </div>
+        <!-- 5 -->
+        <div class="task-row">
+          <div class="task-priority-bar" style="background:var(--priority-low)"></div>
+          <div class="task-body">
+            <span class="task-title">Atualizar README</span>
+            <div class="task-meta">
+              <span class="badge badge-done">Concluída</span>
+              <span class="badge badge-low">Baixa</span>
+              <span class="task-date">📅 18/05/2025</span>
+            </div>
+          </div>
+          <div class="task-actions">
+            <a class="btn btn-ghost btn-sm">Editar</a>
+            <button class="btn btn-danger btn-sm">Excluir</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="s-footer">© 2025 TaskHub — Gerencie suas tarefas com eficiência.</div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════
+     TELA 4 — KANBAN
+══════════════════════════════ -->
+<div id="s4">
+  <div class="screen-label">
+    04 — Kanban
+    <span>Visualização em quadro (persistida em cookie)</span>
+    <div class="nav-pill">
+      <a href="#s3">← Anterior</a>
+      <a href="#toc">↑ Topo</a>
+      <a href="#s5">Próxima →</a>
+    </div>
+  </div>
+  <div class="screen">
+    <div class="s-nav">
+      <div class="s-nav-inner">
+        <a class="s-nav-brand">☰ TaskHub</a>
+        <div class="s-nav-actions">
+          <span class="s-nav-user">Olá, <strong>alice</strong></span>
+          <a class="btn btn-primary btn-sm">+ Nova Tarefa</a>
+          <a class="btn btn-ghost btn-sm">Sair</a>
+        </div>
+      </div>
+    </div>
+    <div class="s-main">
+      <div class="page-header">
+        <div>
+          <h2>📋 Minhas Tarefas</h2>
+          <p>5 tarefa(s) encontrada(s)</p>
+        </div>
+        <a class="btn btn-primary">+ Nova Tarefa</a>
+      </div>
+      <div class="toolbar">
+        <div class="search-wrap">
+          <span class="search-icon">🔍</span>
+          <input type="search" class="search-input" placeholder="Buscar tarefas...">
+        </div>
+        <div class="view-toggle">
+          <a href="#s3" class="view-btn">☰ Lista</a>
+          <button class="view-btn active">⎓ Kanban</button>
+        </div>
+      </div>
+      <div class="kanban-board">
+        <!-- Pendente -->
+        <div class="kanban-col col-pending">
+          <div class="kanban-col-header">
+            <h3>⏳ Pendente</h3>
+            <span class="col-count">2</span>
+          </div>
+          <div class="kanban-cards">
+            <div class="kanban-card">
+              <div class="kanban-card-top"><span class="badge badge-high">Alta</span></div>
+              <div class="kanban-card-title">Revisar relatório CP-2</div>
+              <div class="kanban-card-desc">Análise completa do relatório trimestral e revisão dos indicadores de desempenho.</div>
+              <div class="kanban-card-footer">
+                <span class="kanban-card-date">📅 12/05/2025</span>
+                <div class="kanban-card-actions">
+                  <a class="btn btn-ghost btn-sm">Editar</a>
+                  <button class="btn btn-danger btn-sm">Excluir</button>
+                </div>
+              </div>
+            </div>
+            <div class="kanban-card">
+              <div class="kanban-card-top"><span class="badge badge-medium">Média</span></div>
+              <div class="kanban-card-title">Escrever testes unitários</div>
+              <div class="kanban-card-desc">Cobertura de testes para os módulos de autenticação e gerenciamento de tarefas.</div>
+              <div class="kanban-card-footer">
+                <span class="kanban-card-date">📅 16/05/2025</span>
+                <div class="kanban-card-actions">
+                  <a class="btn btn-ghost btn-sm">Editar</a>
+                  <button class="btn btn-danger btn-sm">Excluir</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Em Progresso -->
+        <div class="kanban-col col-progress">
+          <div class="kanban-col-header">
+            <h3>🔄 Em Progresso</h3>
+            <span class="col-count">2</span>
+          </div>
+          <div class="kanban-cards">
+            <div class="kanban-card">
+              <div class="kanban-card-top"><span class="badge badge-high">Alta</span></div>
+              <div class="kanban-card-title">Implementar autenticação OAuth</div>
+              <div class="kanban-card-desc">Integração com Google OAuth 2.0 para login social no sistema TaskHub.</div>
+              <div class="kanban-card-footer">
+                <span class="kanban-card-date">📅 10/05/2025</span>
+                <div class="kanban-card-actions">
+                  <a class="btn btn-ghost btn-sm">Editar</a>
+                  <button class="btn btn-danger btn-sm">Excluir</button>
+                </div>
+              </div>
+            </div>
+            <div class="kanban-card">
+              <div class="kanban-card-top"><span class="badge badge-medium">Média</span></div>
+              <div class="kanban-card-title">Refatorar módulo de tarefas</div>
+              <div class="kanban-card-desc">Reorganizar a estrutura dos blueprints e melhorar a separação de responsabilidades.</div>
+              <div class="kanban-card-footer">
+                <span class="kanban-card-date">📅 14/05/2025</span>
+                <div class="kanban-card-actions">
+                  <a class="btn btn-ghost btn-sm">Editar</a>
+                  <button class="btn btn-danger btn-sm">Excluir</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Concluída -->
+        <div class="kanban-col col-done">
+          <div class="kanban-col-header">
+            <h3>✅ Concluída</h3>
+            <span class="col-count">1</span>
+          </div>
+          <div class="kanban-cards">
+            <div class="kanban-card">
+              <div class="kanban-card-top"><span class="badge badge-low">Baixa</span></div>
+              <div class="kanban-card-title">Atualizar README</div>
+              <div class="kanban-card-desc">Documentar as instruções de instalação, variáveis de ambiente e como rodar o projeto.</div>
+              <div class="kanban-card-footer">
+                <span class="kanban-card-date">📅 18/05/2025</span>
+                <div class="kanban-card-actions">
+                  <a class="btn btn-ghost btn-sm">Editar</a>
+                  <button class="btn btn-danger btn-sm">Excluir</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="s-footer">© 2025 TaskHub — Gerencie suas tarefas com eficiência.</div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════
+     TELA 5 — NOVA TAREFA
+══════════════════════════════ -->
+<div id="s5">
+  <div class="screen-label">
+    05 — Nova Tarefa
+    <span>Formulário de criação</span>
+    <div class="nav-pill">
+      <a href="#s4">← Anterior</a>
+      <a href="#toc">↑ Topo</a>
+      <a href="#s6">Próxima →</a>
+    </div>
+  </div>
+  <div class="screen">
+    <div class="s-nav">
+      <div class="s-nav-inner">
+        <a class="s-nav-brand">☰ TaskHub</a>
+        <div class="s-nav-actions">
+          <span class="s-nav-user">Olá, <strong>alice</strong></span>
+          <a class="btn btn-primary btn-sm">+ Nova Tarefa</a>
+          <a class="btn btn-ghost btn-sm">Sair</a>
+        </div>
+      </div>
+    </div>
+    <div class="s-main">
+      <a href="#s3" class="back-link">← Voltar</a>
+      <div class="page-title">➕ Nova Tarefa</div>
+      <div class="form-card">
+        <div class="form-group">
+          <label class="form-label">Título</label>
+          <input type="text" class="form-control" placeholder="Ex.: Implementar autenticação OAuth">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Descrição</label>
+          <textarea class="form-control" placeholder="Descreva os detalhes da tarefa..."></textarea>
+        </div>
+        <div class="form-row">
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">Status</label>
+            <select class="form-control">
+              <option selected>Pendente</option>
+              <option>Em Progresso</option>
+              <option>Concluída</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">Prioridade</label>
+            <select class="form-control">
+              <option>Baixa</option>
+              <option selected>Média</option>
+              <option>Alta</option>
+            </select>
+          </div>
+        </div>
+        <div style="margin-top:28px">
+          <div class="form-actions">
+            <a class="btn btn-ghost">Cancelar</a>
+            <button class="btn btn-primary">Salvar Tarefa</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="s-footer">© 2025 TaskHub — Gerencie suas tarefas com eficiência.</div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════
+     TELA 6 — EDITAR TAREFA
+══════════════════════════════ -->
+<div id="s6">
+  <div class="screen-label">
+    06 — Editar Tarefa
+    <span>Formulário de edição com Zona de Perigo</span>
+    <div class="nav-pill">
+      <a href="#s5">← Anterior</a>
+      <a href="#toc">↑ Topo</a>
+      <a href="#s7">Próxima →</a>
+    </div>
+  </div>
+  <div class="screen">
+    <div class="s-nav">
+      <div class="s-nav-inner">
+        <a class="s-nav-brand">☰ TaskHub</a>
+        <div class="s-nav-actions">
+          <span class="s-nav-user">Olá, <strong>alice</strong></span>
+          <a class="btn btn-primary btn-sm">+ Nova Tarefa</a>
+          <a class="btn btn-ghost btn-sm">Sair</a>
+        </div>
+      </div>
+    </div>
+    <div class="s-main">
+      <a href="#s3" class="back-link">← Voltar</a>
+      <div class="page-title">✏️ Editar Tarefa</div>
+      <div class="form-card">
+        <div class="form-group">
+          <label class="form-label">Título</label>
+          <input type="text" class="form-control" value="Refatorar módulo de tarefas">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Descrição</label>
+          <textarea class="form-control">Reorganizar a estrutura dos blueprints e melhorar a separação de responsabilidades.</textarea>
+        </div>
+        <div class="form-row">
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">Status</label>
+            <select class="form-control">
+              <option>Pendente</option>
+              <option selected>Em Progresso</option>
+              <option>Concluída</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">Prioridade</label>
+            <select class="form-control">
+              <option>Baixa</option>
+              <option selected>Média</option>
+              <option>Alta</option>
+            </select>
+          </div>
+        </div>
+        <div style="margin-top:28px">
+          <div class="form-actions">
+            <a class="btn btn-ghost">Cancelar</a>
+            <button class="btn btn-primary">Salvar Alterações</button>
+          </div>
+        </div>
+      </div>
+      <div class="danger-zone">
+        <div class="danger-zone-title">⚠️ Zona de Perigo</div>
+        <div class="danger-zone-desc">A exclusão é permanente e não pode ser desfeita. Todos os dados desta tarefa serão removidos.</div>
+        <button class="btn btn-danger">🗑️ Excluir esta tarefa</button>
+      </div>
+    </div>
+    <div class="s-footer">© 2025 TaskHub — Gerencie suas tarefas com eficiência.</div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════
+     TELA 7 — IDOR VULNERÁVEL
+══════════════════════════════ -->
+<div id="s7">
+  <div class="screen-label" style="background:#7f1d1d">
+    07 — IDOR: Vulnerável
+    <span>Bob acessa /tasks/edit/1 (tarefa da Alice)</span>
+    <div class="nav-pill">
+      <a href="#s6">← Anterior</a>
+      <a href="#toc">↑ Topo</a>
+      <a href="#s8">Próxima →</a>
+    </div>
+  </div>
+  <div class="screen">
+    <div class="s-nav">
+      <div class="s-nav-inner">
+        <a class="s-nav-brand">☰ TaskHub</a>
+        <div class="s-nav-actions">
+          <span class="s-nav-user">Olá, <strong>bob</strong></span>
+          <a class="btn btn-primary btn-sm">+ Nova Tarefa</a>
+          <a class="btn btn-ghost btn-sm">Sair</a>
+        </div>
+      </div>
+    </div>
+    <div class="s-main">
+      <div class="url-bar">
+        <span class="url-bar-label">🔗 URL</span>
+        <span class="url-bar-url">http://localhost:5000/tasks/edit/1</span>
+        <span class="url-bar-note bad">⚡ Bob manipulou o ID na URL</span>
+      </div>
+      <div class="banner banner-danger">
+        <span style="font-size:1.2rem">⚠️</span>
+        <div>
+          <strong>VULNERABILIDADE IDOR ATIVA</strong><br>
+          Bob está visualizando <em>e</em> editando a tarefa de Alice! O sistema não verifica se
+          <code>task.user_id == current_user.id</code> antes de carregar o formulário.
+        </div>
+      </div>
+      <a href="#s3" class="back-link">← Voltar</a>
+      <div class="page-title">✏️ Editar Tarefa</div>
+      <div class="victim-badge">🎯 Proprietária real: <strong>alice</strong> &nbsp;|&nbsp; Tarefa ID: <strong>#1</strong> &nbsp;|&nbsp; Usuário logado: <strong>bob</strong></div>
+      <div class="form-card danger-border">
+        <div class="form-card-badge">🔓 Dados confidenciais da Alice expostos a Bob</div>
+        <div class="form-group">
+          <label class="form-label">Título</label>
+          <input type="text" class="form-control field-sensitive" value="Senha do servidor de produção: admin@2024">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Descrição</label>
+          <textarea class="form-control field-sensitive">DADO CONFIDENCIAL DA ALICE — Credenciais de acesso ao ambiente de produção. NÃO COMPARTILHAR.</textarea>
+        </div>
+        <div class="form-row">
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">Status</label>
+            <select class="form-control">
+              <option selected>Pendente</option>
+              <option>Em Progresso</option>
+              <option>Concluída</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">Prioridade</label>
+            <select class="form-control">
+              <option>Baixa</option>
+              <option>Média</option>
+              <option selected>Alta</option>
+            </select>
+          </div>
+        </div>
+        <div style="margin-top:28px">
+          <div class="form-actions">
+            <a class="btn btn-ghost">Cancelar</a>
+            <button class="btn btn-primary">Salvar Alterações</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="s-footer">© 2025 TaskHub — Gerencie suas tarefas com eficiência.</div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════
+     TELA 8 — IDOR CORRIGIDO
+══════════════════════════════ -->
+<div id="s8">
+  <div class="screen-label" style="background:#14532d">
+    08 — IDOR: Corrigido
+    <span>Mesma URL → HTTP 404 Not Found</span>
+    <div class="nav-pill">
+      <a href="#s7">← Anterior</a>
+      <a href="#toc">↑ Topo</a>
+    </div>
+  </div>
+  <div class="screen">
+    <div class="s-nav">
+      <div class="s-nav-inner">
+        <a class="s-nav-brand">☰ TaskHub</a>
+        <div class="s-nav-actions">
+          <span class="s-nav-user">Olá, <strong>bob</strong></span>
+          <a class="btn btn-primary btn-sm">+ Nova Tarefa</a>
+          <a class="btn btn-ghost btn-sm">Sair</a>
+        </div>
+      </div>
+    </div>
+    <div class="s-main">
+      <div class="url-bar">
+        <span class="url-bar-label">🔗 URL</span>
+        <span class="url-bar-url">http://localhost:5000/tasks/edit/1</span>
+        <span class="url-bar-note good">✅ Acesso bloqueado</span>
+      </div>
+      <div class="banner banner-success">
+        <span style="font-size:1.2rem">✅</span>
+        <div>
+          <strong>CORREÇÃO APLICADA</strong> — A query agora inclui a verificação de dono:<br>
+          <code>Task.query.filter_by(id=task_id, user_id=current_user.id).first_or_404()</code><br>
+          Bob tentou acessar <code>/tasks/edit/1</code> (tarefa de Alice) e recebeu <strong>404 Not Found</strong>.
+        </div>
+      </div>
+      <div class="flex-col-center">
+        <div class="error-card">
+          <div class="error-code">404</div>
+          <div class="error-title">Not Found</div>
+          <div class="error-desc">
+            Tarefa não encontrada ou sem permissão de acesso.<br>
+            Você não pode visualizar ou editar tarefas de outros usuários.
+          </div>
+          <a href="#s3" class="btn btn-primary">← Voltar à lista</a>
+        </div>
+        <div class="code-block mt-4">
+          <div class="code-block-title">
+            <span style="color:#ef4444">✗</span> Código vulnerável → <span style="color:#22c55e">✓</span> Código corrigido
+          </div>
+          <pre><span class="code-comment"># Antes (vulnerável) — busca apenas pelo ID</span>
+<span class="code-before">- task = Task.query.get_or_404(task_id)</span>
+
+<span class="code-comment"># Depois (corrigido) — exige que a tarefa pertença ao usuário</span>
+<span class="code-after">+ task = Task.query.filter_by(</span>
+<span class="code-after">+     id=task_id,</span>
+<span class="code-after">+     user_id=current_user.id</span>
+<span class="code-after">+ ).first_or_404()</span>
+
+<span class="code-comment"># Resultado: Bob acessa /tasks/edit/1 → HTTP 404</span>
+<span class="code-comment"># A tarefa de Alice não é retornada para outros usuários</span></pre>
+        </div>
+      </div>
+    </div>
+    <div class="s-footer">© 2025 TaskHub — Gerencie suas tarefas com eficiência.</div>
+  </div>
+</div>
+
+</body>
+</html>
