@@ -1,26 +1,53 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-theme="{{ request.cookies.get('theme', 'light') }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#FAF9F5">
     <title>{% if title %}{{ title }} — TaskHub{% else %}TaskHub{% endif %}</title>
+
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23D97757'/%3E%3Cpath d='M9 16l4.5 4.5L23 11' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
 
 <nav class="navbar">
     <div class="nav-container">
-        <a href="{{ url_for('tasks.index') }}" class="nav-brand">
-            <span class="brand-icon">&#9776;</span> TaskHub
+        <a href="{{ url_for('tasks.index') if current_user.is_authenticated else url_for('auth.login') }}" class="nav-brand">
+            <span class="brand-mark">T</span>
+            TaskHub
         </a>
         <div class="nav-links">
             {% if current_user.is_authenticated %}
-                <span class="nav-user">Olá, <strong>{{ current_user.username }}</strong></span>
-                <a href="{{ url_for('tasks.create') }}" class="btn btn-primary btn-sm">+ Nova Tarefa</a>
+                <a href="{{ url_for('tasks.create') }}" class="btn btn-primary btn-sm">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    Nova
+                </a>
+
+                {% set theme = request.cookies.get('theme', 'light') %}
+                <a href="{{ url_for('tasks.set_theme', theme='dark' if theme == 'light' else 'light') }}"
+                   class="btn btn-ghost btn-sm theme-toggle" title="Alternar tema">
+                    {% if theme == 'dark' %}
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+                    {% else %}
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                    {% endif %}
+                </a>
+
+                <a href="{{ url_for('auth.view_profile', user_id=current_user.id) }}" class="nav-avatar" title="Meu perfil">
+                    {% if current_user.profile_pic %}
+                        <img src="{{ url_for('static', filename='uploads/' + current_user.profile_pic) }}" alt="{{ current_user.username }}">
+                    {% else %}
+                        {{ (current_user.display_name or current_user.username)[0]|upper }}
+                    {% endif %}
+                </a>
                 <a href="{{ url_for('auth.logout') }}" class="btn btn-ghost btn-sm">Sair</a>
             {% else %}
                 <a href="{{ url_for('auth.login') }}" class="btn btn-ghost btn-sm">Entrar</a>
-                <a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-sm">Cadastrar</a>
+                <a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-sm">Começar grátis</a>
             {% endif %}
         </div>
     </div>
@@ -33,7 +60,7 @@
                 {% for category, message in messages %}
                     <div class="alert alert-{{ category }}">
                         <span>{{ message }}</span>
-                        <button class="alert-close" onclick="this.parentElement.remove()">&#10005;</button>
+                        <button class="alert-close" onclick="this.parentElement.remove()" aria-label="Fechar">&#10005;</button>
                     </div>
                 {% endfor %}
             </div>
@@ -44,7 +71,7 @@
 </main>
 
 <footer class="footer">
-    <p>&copy; 2024 TaskHub &mdash; Gerencie suas tarefas com eficiência.</p>
+    <p>TaskHub &mdash; Gerencie suas tarefas com clareza. Projeto acadêmico, Coding for Security &copy; 2025.</p>
 </footer>
 
 </body>

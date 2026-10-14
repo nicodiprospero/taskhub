@@ -1,6 +1,6 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, TextAreaField, SelectField, SubmitField
-from wtforms.validators import DataRequired, Length
+from wtforms import StringField, TextAreaField, SelectField, SubmitField, DateField
+from wtforms.validators import DataRequired, Length, Optional
 
 
 class TaskForm(FlaskForm):
@@ -9,11 +9,12 @@ class TaskForm(FlaskForm):
         Length(min=3, max=140, message='O título deve ter entre 3 e 140 caracteres.')
     ])
     description = TextAreaField('Descrição', validators=[
-        Length(max=1000, message='A descrição pode ter no máximo 1000 caracteres.')
+        Optional(),
+        Length(max=2000, message='A descrição pode ter no máximo 2000 caracteres.')
     ])
     status = SelectField('Status', choices=[
         ('pending', 'Pendente'),
-        ('in_progress', 'Em Progresso'),
+        ('in_progress', 'Em progresso'),
         ('done', 'Concluída')
     ], validators=[DataRequired()])
     priority = SelectField('Prioridade', choices=[
@@ -21,4 +22,9 @@ class TaskForm(FlaskForm):
         ('medium', 'Média'),
         ('high', 'Alta')
     ], validators=[DataRequired()])
-    submit = SubmitField('Salvar Tarefa')
+    due_date = DateField('Data de entrega', validators=[Optional()])
+    tags = StringField('Tags (separadas por vírgula)', validators=[
+        Optional(),
+        Length(max=200)
+    ])
+    submit = SubmitField('Salvar tarefa')

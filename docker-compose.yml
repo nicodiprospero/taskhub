@@ -1,0 +1,29 @@
+services:
+  taskhub:
+    build: .
+    image: taskhub:latest
+    container_name: taskhub
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    volumes:
+      # Persistencia: banco SQLite e estado de seguranca
+      - taskhub_data:/app/data
+      # Persistencia: uploads de fotos de perfil
+      - taskhub_uploads:/app/app/static/uploads
+    environment:
+      - SECRET_KEY=${SECRET_KEY:-change-me-in-production-please}
+      - DATA_DIR=/app/data
+      - SECURITY_STATE_FILE=/app/data/.security_state
+      - FLASK_ENV=production
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  taskhub_data:
+    name: taskhub_data
+  taskhub_uploads:
+    name: taskhub_uploads

@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block content %}
+
+{% set is_owner = (user.id == current_user.id) %}
+
+<div class="page-header">
+    <div>
+        <h1>{% if is_owner %}Meu perfil{% else %}Perfil de {{ user.username }}{% endif %}</h1>
+        <p class="page-subtitle">
+            {% if is_owner %}Suas informações e estatísticas pessoais.
+            {% else %}Você está vendo o perfil de outro usuário.{% endif %}
+        </p>
+    </div>
+</div>
+
+<div class="profile-grid">
+    <!-- Card do usuário -->
+    <div class="profile-card">
+        {% if user.profile_pic %}
+            <img src="{{ url_for('static', filename='uploads/' + user.profile_pic) }}"
+                 alt="Foto de {{ user.username }}" class="profile-photo">
+        {% else %}
+            <div class="profile-avatar">{{ (user.display_name or user.username)[0]|upper }}</div>
+        {% endif %}
+
+        <h2 class="profile-name">{{ user.display_name or user.username }}</h2>
+        <p class="profile-email">@{{ user.username }} · {{ user.email }}</p>
+
+        {% if user.bio %}
+            <p class="profile-bio">{{ user.bio }}</p>
+        {% endif %}
+
+        <p class="profile-meta">
+            Conta criada em
+            {{ user.created_at.strftime('%d/%m/%Y') if user.created_at else '—' }}
+        </p>
+
+        {% if user.twofa_enabled %}
+            <span class="status-badge status-done" style="margin-top:.65rem">2FA ativo</span>
+        {% endif %}
+
+        <div class="profile-actions">
+            <a href="{{ url_for('auth.edit_profile', user_id=user.id) }}" class="btn btn-soft btn-sm">
+                Editar perfil
+            </a>
+            <a href="{{ url_for('auth.change_password', user_id=user.id) }}" class="btn btn-soft btn-sm">
+                Alterar senha
+            </a>
+        </div>
+    </div>
+
+    <!-- Estatísticas -->
+    <div class="profile-stats">
+        <h3>Estatísticas de tarefas</h3>
+        <div class="profile-stat-grid">
+            <div class="profile-stat">
+                <span class="profile-stat-value">{{ stats.total }}</span>
+                <span class="profile-stat-label">Total</span>
+            </div>
+            <div class="profile-stat">
+                <span class="profile-stat-value">{{ stats.done }}</span>
+                <span class="profile-stat-label">Concluídas</span>
+            </div>
+            <div class="profile-stat">
+                <span class="profile-stat-value">{{ stats.in_progress }}</span>
+                <span class="profile-stat-label">Em progresso</span>
+            </div>
+            <div class="profile-stat">
+                <span class="profile-stat-value">{{ stats.pending }}</span>
+                <span class="profile-stat-label">Pendentes</span>
+            </div>
+            <div class="profile-stat">
+                <span class="profile-stat-value text-red">{{ stats.overdue }}</span>
+                <span class="profile-stat-label">Atrasadas</span>
+            </div>
+            <div class="profile-stat">
+                <span class="profile-stat-value">{{ stats.completion_rate }}%</span>
+                <span class="profile-stat-label">Taxa conclusão</span>
+            </div>
+        </div>
+
+        <div class="progress-section">
+            <div class="progress-label">
+                <span>Progresso geral</span>
+                <span>{{ stats.completion_rate }}%</span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" style="width: {{ stats.completion_rate }}%"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

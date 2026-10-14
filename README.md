@@ -1,42 +1,87 @@
 # TaskHub
 
-Aplicação web Flask para gestão de tarefas, desenvolvida como projeto da disciplina **Coding for Security** (CP-2 / 1TDCPA-2025).
+Aplicação web em Flask para gerenciamento de tarefas, feita como projeto de **Coding for Security**.
+
+O projeto tem duas partes: uma aplicação funcional de tarefas e uma demo controlada de vulnerabilidades de controle de acesso. As falhas existem de propósito para apresentação e não devem ser usadas em produção.
 
 ## Stack
-- Flask 3.0 + Application Factory
-- SQLite via Flask-SQLAlchemy
-- Flask-Login (autenticação)
-- Flask-WTF (forms + CSRF)
-- 2 Blueprints: `auth` e `tasks`
+
+- Flask 3
+- SQLite
+- Flask-SQLAlchemy
+- Flask-Login
+- Flask-WTF
+- CSRFProtect
+- Blueprints para separar módulos
 
 ## Funcionalidades
-- Registro, login e logout
-- CRUD completo de tarefas (título, descrição, prioridade, status)
-- Busca por título
-- Duas visualizações (lista e Kanban) com preferência salva em cookie
-- Design responsivo, sem frameworks CSS externos
+
+- Cadastro, login e logout
+- CRUD de tarefas
+- Tags por usuário
+- Filtros e busca
+- Visualização em lista e Kanban
+- Preferência de visualização salva em cookie
+- Tema claro/escuro salvo em cookie
+- Perfil com estatísticas
+- Upload de foto de perfil
+- Bulk delete
+- Tarefas atrasadas com destaque visual
 
 ## Como rodar
 
 ```bash
 pip install -r requirements.txt
-python seed.py     # (opcional) cria banco com dados de demo
-python run.py
+python reset.py
+python start.py
 ```
 
-Acessar em `http://127.0.0.1:5000`.
+Acesse:
 
-## Vulnerabilidade intencional
+```text
+http://127.0.0.1:5000
+```
 
-Este projeto contém uma vulnerabilidade **IDOR (Insecure Direct Object Reference)** inserida propositalmente em `app/tasks/routes.py` nas rotas `/tasks/edit/<id>` e `/tasks/delete/<id>`.
+## Contas de demo
 
-A falha permite que um usuário autenticado acesse e modifique tarefas de outros usuários apenas alterando o ID na URL. A correção (filtro por `user_id=current_user.id`) está documentada nos comentários do código e é aplicada ao vivo durante a apresentação.
+| Usuário | E-mail | Senha |
+|---|---|---|
+| Alice | alice@taskhub.com | 123456 |
+| Bob | bob@taskhub.com | 123456 |
 
-**Ver detalhes completos em:** [`RELATORIO.md`](RELATORIO.md) e [`APRESENTACAO.md`](APRESENTACAO.md).
+## Scripts
 
-> Aviso: este sistema tem vulnerabilidade educacional — **não usar em produção**.
+| Script | O que faz |
+|---|---|
+| `reset.py` | recria o banco, popula Alice/Bob e deixa o sistema vulnerável |
+| `start.py` | inicia o servidor com o roteiro de exploits no terminal |
+| `fix.py` | muda o sistema para modo corrigido |
+| `unfix.py` | reativa as vulnerabilidades para repetir a demo |
+| `seed.py` | popula o banco com dados iniciais |
+| `run.py` | inicia o Flask de forma simples |
 
-## Documentação do projeto
-- [`RELATORIO.md`](RELATORIO.md) — Relatório técnico para entrega
-- [`APRESENTACAO.md`](APRESENTACAO.md) — Roteiro das falas (4 integrantes)
-- [`COMO_RODAR.txt`](COMO_RODAR.txt) — Guia rápido para o dia da apresentação
+## Vulnerabilidades intencionais
+
+O modo vulnerável demonstra:
+
+- IDOR para visualizar perfil de outro usuário
+- IDOR para editar perfil de outro usuário
+- Upload inseguro na edição de perfil
+- Bypass de 2FA simulado na troca de senha
+- IDOR para editar tarefa privada de outro usuário
+
+Exemplo de fluxo da demo: Bob entra na própria conta e tenta acessar recursos da Alice mudando o ID na URL.
+
+## Correção
+
+A correção é aplicada com:
+
+```bash
+python fix.py
+```
+
+Depois disso, as mesmas URLs deixam de funcionar e passam a exibir uma página explicando a vulnerabilidade corrigida.
+
+A regra principal é validar ownership no backend. Não basta o usuário estar logado; o recurso também precisa pertencer a ele.
+
+> Projeto educacional. Não usar em produção no modo vulnerável.

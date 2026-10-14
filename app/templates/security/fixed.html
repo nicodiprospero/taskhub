@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% set vulns = {
+    'idor_task_edit': {
+        'name': 'IDOR — Edição/Exclusão de Tarefa',
+        'owasp': 'A01:2021 (Broken Access Control)',
+        'fix': 'Adicionado filtro user_id=current_user.id na query.',
+    },
+    'idor_profile_view': {
+        'name': 'IDOR — Visualização de Perfil',
+        'owasp': 'A01:2021 (Broken Access Control)',
+        'fix': 'Bloqueio quando user_id da URL ≠ usuário logado.',
+    },
+    'idor_profile_edit': {
+        'name': 'IDOR — Edição de Perfil',
+        'owasp': 'A01:2021 (Broken Access Control)',
+        'fix': 'Validação de dono antes de aceitar mudanças no perfil.',
+    },
+    'twofa_bypass': {
+        'name': 'Bypass de 2FA + IDOR em troca de senha',
+        'owasp': 'A07:2021 (Authentication Failures)',
+        'fix': 'Backdoor de URL removido + validação de dono.',
+    },
+    'insecure_upload': {
+        'name': 'Upload Inseguro',
+        'owasp': 'A04:2021 (Insecure Design)',
+        'fix': 'Sanitização de filename + lista branca de extensões.',
+    },
+} %}
+{% set v = vulns.get(vuln_key, {'name': 'Vulnerabilidade desconhecida', 'owasp': '?', 'fix': '?'}) %}
+
+{% block content %}
+<div class="security-fixed">
+    <div class="security-fixed-icon">
+        <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+        </svg>
+    </div>
+
+    <span class="security-badge">PATCH APLICADO</span>
+    <h1>Vulnerabilidade corrigida</h1>
+    <p class="security-fixed-sub">A tentativa de exploit foi bloqueada com sucesso.</p>
+
+    <div class="security-fixed-card">
+        <div class="security-fixed-row">
+            <span class="security-fixed-label">Tipo</span>
+            <span class="security-fixed-value">{{ v.name }}</span>
+        </div>
+        <div class="security-fixed-row">
+            <span class="security-fixed-label">Classificação OWASP</span>
+            <span class="security-fixed-value"><code>{{ v.owasp }}</code></span>
+        </div>
+        <div class="security-fixed-row">
+            <span class="security-fixed-label">URL atacada</span>
+            <span class="security-fixed-value"><code>{{ attempted_url }}</code></span>
+        </div>
+        {% if attempted_id and current_id %}
+        <div class="security-fixed-row">
+            <span class="security-fixed-label">Recurso solicitado</span>
+            <span class="security-fixed-value">ID #{{ attempted_id }} (você é o ID #{{ current_id }})</span>
+        </div>
+        {% endif %}
+        <div class="security-fixed-row">
+            <span class="security-fixed-label">Correção aplicada</span>
+            <span class="security-fixed-value">{{ v.fix }}</span>
+        </div>
+    </div>
+
+    <div class="security-fixed-actions">
+        <a href="{{ url_for('tasks.index') }}" class="btn btn-primary">Voltar para o painel</a>
+        <a href="{{ url_for('auth.profile') }}" class="btn btn-soft">Meu perfil</a>
+    </div>
+
+    <p class="security-fixed-foot">
+        Quer rodar a demo novamente? Execute <code>python unfix.py</code> no terminal para reativar as vulnerabilidades.
+    </p>
+</div>
+{% endblock %}

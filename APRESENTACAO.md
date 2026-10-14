@@ -1,215 +1,199 @@
 # Roteiro de Apresentação — TaskHub
 
-**Duração total estimada:** 10–12 minutos
-**Integrantes:** 4 pessoas (Pessoa A, B, C, D — substituir pelos nomes)
+**Tempo total:** 12 a 15 minutos  
+**Grupo:** 4 integrantes
 
 ---
 
-## Divisão das falas
+## Divisão sugerida
 
-| Bloco | Responsável | Tempo | O que fala |
-|-------|-------------|-------|------------|
-| 1. Abertura & Tema | **Pessoa A** | ~1 min | Apresenta o grupo, o problema, a ideia do produto |
-| 2. Arquitetura Técnica | **Pessoa B** | ~2,5 min | Stack, Blueprints, Extensions, modelo de dados |
-| 3. Demo Funcional | **Pessoa C** | ~3 min | Roda o sistema ao vivo: registrar, logar, CRUD, cookie |
-| 4. Vulnerabilidade + Correção | **Pessoa D** | ~3,5 min | Demo do ataque IDOR + correção ao vivo |
-| 5. Encerramento | **Todos** | ~1 min | Aprendizados + dúvidas |
-
----
-
-## Bloco 1 — Abertura (Pessoa A)
-
-> "Boa tarde! Somos o grupo [nomes]. Nosso projeto se chama **TaskHub** — uma plataforma SaaS de gestão de tarefas pessoais, no estilo Trello ou Todoist, porém simplificada.
->
-> O problema que buscamos resolver: profissionais e estudantes precisam de uma forma rápida de organizar tarefas com prioridade e status, com visualização em lista **e** em quadro Kanban — e o usuário quer que o sistema **lembre** qual visualização ele prefere entre sessões.
->
-> Nosso foco foi entregar um sistema **simples, funcional e bem estruturado**, seguindo as boas práticas de Flask e implementando uma vulnerabilidade real para depois corrigi-la ao vivo."
+| Parte | Pessoa | Tempo | Conteúdo |
+|---|---:|---:|---|
+| 1 | A | 1 min | ideia do projeto e objetivo |
+| 2 | B | 2–3 min | arquitetura, banco e stack |
+| 3 | C | 3 min | demo funcional |
+| 4 | D | 5 min | vulnerabilidades e correção |
+| 5 | Todos | 1 min | fechamento |
 
 ---
 
-## Bloco 2 — Arquitetura Técnica (Pessoa B)
+## Pessoa A — Abertura
 
-> "A aplicação segue o padrão **Application Factory** do Flask. Abrimos o arquivo `app/__init__.py`."
-
-**Mostrar em tela:** `app/__init__.py`
-
-> "Aqui criamos a instância do Flask e inicializamos três extensions:
+> Boa tarde. Nosso projeto se chama **TaskHub**. Ele é uma aplicação Flask para gerenciamento de tarefas, com login, cadastro, perfil, tags, filtros, visualização em lista e Kanban, além de tema claro e escuro.
 >
-> - **Flask-SQLAlchemy** — ORM que conversa com o SQLite, nos protege de SQL Injection por padrão e mapeia tabelas para classes Python.
-> - **Flask-Login** — gerencia sessão do usuário, login/logout e o decorator `@login_required` que protege rotas.
-> - **Flask-WTF** — cria formulários com validação automática e proteção **CSRF** em todos os POSTs.
+> A gente escolheu esse tema porque ele parece simples por fora, mas tem um ponto ótimo para cybersegurança: cada tarefa e cada perfil pertencem a um usuário. Então dá para demonstrar bem a diferença entre estar logado e realmente ter permissão para acessar um recurso.
 >
-> Organizamos a aplicação em dois **Blueprints**:"
-
-**Mostrar:** `app/auth/` e `app/tasks/`
-
-> - `auth_bp` (prefixo `/auth`) — registro, login, logout
-> - `tasks_bp` — rotas de CRUD e cookie de preferência
->
-> "Blueprints nos permitem separar o código por domínio: cada módulo tem suas próprias rotas, formulários e pode ser mantido independente. Se amanhã quisermos virar um produto de verdade, é fácil adicionar um novo Blueprint `billing_bp` ou `api_bp` sem bagunçar o resto."
-
-**Mostrar:** `app/models.py`
-
-> "No banco temos duas tabelas:
->
-> - **User** — id, username, email, password_hash (armazenamos **hash**, nunca senha em texto puro, usando `werkzeug.security`).
-> - **Task** — id, título, descrição, status, prioridade, data de criação, e `user_id` como chave estrangeira.
->
-> O relacionamento um-para-muitos garante que cada tarefa pertence a um usuário. E é aí que, se a gente descuidar, entra a vulnerabilidade que vocês vão ver daqui a pouco."
+> O projeto começa com algumas vulnerabilidades de propósito. Elas fazem parte da demo. Depois, a gente aplica a correção ao vivo e testa os mesmos caminhos de novo.
 
 ---
 
-## Bloco 3 — Demonstração Funcional (Pessoa C)
+## Pessoa B — Arquitetura e banco
 
-> "Agora vamos ver o sistema funcionando. Estou rodando localmente com `python run.py`."
+Mostrar rapidamente a estrutura do projeto.
 
-**Passo a passo na tela (tenha 2 navegadores/abas anônimas abertas):**
+> A aplicação foi organizada com o padrão **Application Factory** do Flask, então a criação do app, registro dos Blueprints e inicialização das extensions ficam separados.
+>
+> A gente separou o projeto em módulos. A parte de autenticação fica em `auth`, e a parte de tarefas fica em `tasks`. Isso evita um arquivo único gigante e deixa o projeto mais fácil de manter.
 
-1. **Registro**
-   > "Crio uma conta nova em `/auth/register`. Os forms do Flask-WTF validam em tempo real: o e-mail precisa ser válido, senha mínima de 6 caracteres, e o sistema verifica se o username ou e-mail já existem."
+### Extensions
 
-2. **Login**
-   > "Fiz login e fui redirecionado para a tela principal. Já aparece meu nome na navbar."
+> Usamos Flask-SQLAlchemy para o banco, Flask-Login para sessão e controle de login, Flask-WTF para formulários e validação, e CSRFProtect para proteção nos POSTs.
 
-3. **CRUD — Criar**
-   > "Clico em Nova Tarefa, preencho título, descrição, prioridade, status, salvo. Mensagem de flash confirma o sucesso."
+### Banco
 
-4. **CRUD — Listar e Buscar**
-   > "A listagem mostra todas as minhas tarefas. Tem barra de busca — digita, filtra pelo título. Tem borda colorida por prioridade: vermelho, amarelo, verde."
-
-5. **Cookie — Troca de visualização** *(destaque este ponto)*
-   > "Aqui está o uso de **cookie**. Clico em 'Kanban', mudo para visualização de quadro. Agora olha o detalhe: **se eu fechar o navegador e voltar depois, ele lembra que eu preferia Kanban**."
-   >
-   > *(Abrir DevTools → Application → Cookies → mostrar `view_mode=kanban`)*
-   >
-   > "O cookie tem validade de 30 dias. É um caso real de uso: lembrar a preferência de interface do usuário sem precisar gravar isso no banco."
-
-6. **CRUD — Editar e Excluir**
-   > "Edito uma tarefa, mudo o status para 'Concluída', salvo. Excluo outra tarefa — pede confirmação antes."
-
-> "Rotas organizadas, GET para exibir forms, POST para salvar, flash messages em cada ação. Tudo protegido por `@login_required` — se eu deslogar e tentar acessar a URL `/`, sou redirecionado pro login."
-
-**[Passa a bola para a Pessoa D]**
-
-> "Agora o **Pessoa D** vai mostrar a parte mais importante: a vulnerabilidade."
+> O banco é SQLite. Temos usuários, tarefas, tags e uma tabela de associação entre tarefas e tags. Cada tarefa tem um `user_id`, e esse campo é o ponto central da correção das vulnerabilidades de IDOR.
 
 ---
 
-## Bloco 4 — Vulnerabilidade IDOR + Correção ao Vivo (Pessoa D)
+## Pessoa C — Demo funcional
 
-### 4.1 — Explicação teórica (~40s)
+Entrar no sistema normalmente.
 
-> "A vulnerabilidade que escolhemos é **IDOR — Insecure Direct Object Reference**, que faz parte da categoria **Broken Access Control**. Segundo o **OWASP Top 10 de 2021, é a vulnerabilidade nº 1** — a mais comum em aplicações web modernas.
+1. Abrir `http://127.0.0.1:5000`.
+2. Mostrar cadastro ou login.
+3. Entrar como Alice.
+4. Mostrar dashboard de tarefas.
+5. Criar uma tarefa nova.
+6. Editar uma tarefa própria.
+7. Alternar lista/Kanban.
+8. Mostrar cookie `view_mode` no navegador.
+9. Alternar tema claro/escuro.
+10. Mostrar perfil com estatísticas.
+
+Fala sugerida:
+
+> Antes da parte de segurança, dá para ver que o sistema funciona como uma aplicação normal. O usuário consegue criar, editar, filtrar e visualizar tarefas. Também temos cookies para preferências de interface, como modo de visualização e tema.
 >
-> Ela acontece quando o sistema usa um ID direto do objeto na URL (tipo `/tasks/edit/3`) e **confia que o usuário só vai acessar IDs que são dele** — sem verificar no backend se ele realmente é o dono daquele recurso.
->
-> Casos reais: Facebook teve um IDOR que permitia apagar qualquer foto, Uber teve um que expunha dados de viagens de outros usuários, e a Shopify pagou bug bounty de milhares de dólares por falhas parecidas."
+> Agora a gente vai sair do uso comum e testar o que acontece quando um usuário tenta acessar recursos de outra conta.
 
-### 4.2 — Demonstração do ataque (~1 min 30s)
+---
 
-**Setup prévio (antes da apresentação):**
-- Deixe **2 abas** abertas em navegadores ou contextos diferentes (uma normal, uma anônima)
-- Crie 2 contas: `alice@test.com` e `bob@test.com`
-- Faça login como Alice, crie uma tarefa **sensível**: *"Senha do servidor de produção: admin@2024"* — anote o ID que aparece na URL ao clicar em editar (ex: `/tasks/edit/1`)
+## Pessoa D — Vulnerabilidades
 
-**Script da demo:**
+Rodar antes:
 
-> "Temos aqui a conta da **Alice**. Ela criou uma tarefa privada, secreta — uma anotação pessoal com uma senha. Ninguém além dela deveria ver isso."
-
-*(Mostra a tarefa da Alice, clica em editar, mostra a URL `/tasks/edit/1`)*
-
-> "Agora vou fazer logout, e fazer login como outro usuário, o **Bob**. Bob não deveria saber absolutamente nada sobre as tarefas da Alice."
-
-*(Login como Bob. Mostra que Bob tem a lista dele, vazia ou com outras tarefas.)*
-
-> "Bob cria uma tarefa qualquer só para descobrir o padrão da URL. Ele clica em 'Editar' na própria tarefa e vê que a URL é `/tasks/edit/4`. A partir daí, ele pensa: 'Será que existe uma tarefa com ID 1? 2? 3?'"
-
-*(Na barra de endereços, troca manualmente de `/tasks/edit/4` para `/tasks/edit/1`)*
-
-> "E aí está — Bob agora vê a tarefa privada da Alice, com a senha dela. Pior: ele **pode editar, pode apagar**. Sem nenhum alerta, sem nenhum aviso, porque o sistema nunca perguntou 'essa tarefa é realmente sua?'"
-
-*(Altera o título da tarefa da Alice para algo engraçado, salva. Mostra que salvou.)*
-
-> "O impacto aqui é quebra total de **isolamento entre contas**. Um atacante consegue enumerar IDs e ler/modificar/apagar dados de qualquer usuário do sistema."
-
-### 4.3 — Correção ao vivo (~1 min)
-
-> "Agora vamos corrigir. Abrindo o arquivo `app/tasks/routes.py`."
-
-**Mostrar linha 69 (aproximadamente):**
-
-```python
-task = Task.query.get_or_404(task_id)  # VULNERÁVEL
+```bash
+python reset.py
+python start.py
 ```
 
-> "O problema está aqui. A gente busca a tarefa **só pelo ID**, sem verificar se pertence ao usuário. A correção é simples: adicionar um filtro exigindo que o `user_id` da tarefa seja o do usuário logado."
+Entrar como Bob:
 
-**Substituir por:**
-
-```python
-task = Task.query.filter_by(
-    id=task_id, user_id=current_user.id
-).first_or_404()
+```text
+bob@taskhub.com / 123456
 ```
 
-> "E fazemos o mesmo na rota de exclusão."
+### Exploit 1 — Ver perfil da Alice
 
-*(Aplica a mesma mudança na função `delete`. Salva. O Flask em modo debug recarrega automaticamente.)*
+URL:
 
-> "Agora eu, ainda logado como Bob, tento acessar `/tasks/edit/1` de novo..."
+```text
+/profile/1
+```
 
-*(Tenta. Recebe 404.)*
+Fala:
 
-> "**404 — Not Found.** Na visão do Bob, aquela tarefa simplesmente não existe. Isolamento restaurado.
+> Aqui o Bob está logado na própria conta, mas troca o ID da URL para acessar o perfil da Alice. O problema é que a rota confia no ID recebido e não verifica se o Bob deveria ver esses dados.
+
+### Exploit 2 — Editar perfil da Alice
+
+URL:
+
+```text
+/profile/1/edit
+```
+
+Fala:
+
+> Agora o impacto é maior. Bob não só vê o perfil, como consegue alterar dados da Alice. Isso mostra uma falha de autorização, não de autenticação. O login existe, mas a permissão por recurso está faltando.
+
+### Exploit 3 — Upload inseguro
+
+Na tela de edição de perfil, mostrar upload.
+
+Fala:
+
+> Também deixamos o upload propositalmente fraco. O sistema vulnerável não valida direito a extensão e o tipo do arquivo. Em produção isso seria perigoso, mas aqui serve para demonstrar por que upload precisa de validação forte.
+
+### Exploit 4 — Troca de senha com bypass de 2FA
+
+URL:
+
+```text
+/profile/1/change-password?bypass_2fa=admin_override_2024
+```
+
+Fala:
+
+> A Alice tem 2FA ativo. Só que no modo vulnerável existe um bypass simulado, como se fosse uma exceção de admin ou teste esquecida no código. Isso mostra como uma regra especial mal controlada pode quebrar uma proteção inteira.
+
+### Exploit 5 — Editar tarefa privada da Alice
+
+URL:
+
+```text
+/tasks/edit/1
+```
+
+Fala:
+
+> Esse é o IDOR mais direto. Bob acessa uma tarefa privada da Alice só alterando o número da URL. Como a tarefa tem `user_id`, a correção é filtrar também pelo usuário logado, não só pelo ID da tarefa.
+
+---
+
+## Correção ao vivo
+
+No terminal:
+
+```bash
+python fix.py
+```
+
+Fala:
+
+> Agora a gente aplicou o patch. Internamente, o sistema mudou para o estado corrigido, e as rotas passam a validar ownership. Ou seja: o recurso precisa existir e também pertencer ao usuário logado.
+
+Testar de novo:
+
+```text
+/profile/1
+/profile/1/edit
+/profile/1/change-password?bypass_2fa=admin_override_2024
+/tasks/edit/1
+```
+
+Fala:
+
+> Repetindo os mesmos acessos, o sistema não entrega mais os dados. Ele mostra uma página explicando que a vulnerabilidade foi corrigida. O objetivo é deixar claro o antes e depois.
+
+---
+
+## Fechamento
+
+> Em resumo, o TaskHub é uma aplicação funcional, mas também um laboratório de segurança. A principal lição é que `@login_required` não basta. Ele prova quem é o usuário, mas não prova que ele pode acessar qualquer ID da URL.
 >
-> Por que isso funciona? Porque agora o SQLAlchemy gera uma query `WHERE id = ? AND user_id = ?`. Se qualquer uma das condições falhar, nada é retornado. O banco vira o responsável por reforçar a regra de negócio, e não só o frontend."
+> A correção é sempre validar o dono do recurso no backend. Esse é o ponto central para evitar IDOR e Broken Access Control.
 
 ---
 
-## Bloco 5 — Encerramento (Todos)
+## Perguntas prováveis
 
-**Pessoa A:**
-> "Para fechar: nós construímos um sistema funcional e bem organizado, com tudo que foi pedido no enunciado."
+### Por que IDOR?
 
-**Pessoa B (checklist rápido):**
-> "Autenticação com Flask-Login, CRUD completo em SQLite, cookies para preferência de visualização, dois Blueprints, três Extensions, rotas GET e POST organizadas."
+Porque é uma falha comum em sistemas reais e fácil de demonstrar: basta trocar um identificador na URL quando o backend não valida ownership.
 
-**Pessoa C:**
-> "Usabilidade com forms validados, mensagens de feedback e interface responsiva."
+### O sistema está inseguro de propósito?
 
-**Pessoa D:**
-> "E uma vulnerabilidade real — IDOR, top 1 do OWASP — demonstrada e corrigida ao vivo."
+Sim. O estado inicial é vulnerável para fins didáticos. Depois da execução de `python fix.py`, as rotas passam a bloquear os mesmos acessos.
 
-**Todos juntos:**
-> "Obrigado! Alguma dúvida?"
+### Por que não basta esconder botão no frontend?
 
----
+Porque o atacante pode chamar a URL diretamente. A autorização precisa estar no backend.
 
-## Dicas práticas para o dia da apresentação
+### Qual é a correção principal?
 
-- [ ] **Ensaie uma vez inteiro.** Os deslizes vão aparecer na primeira passagem.
-- [ ] **Tenha o banco limpo antes de começar.** Delete `taskhub.db` e deixe só as 2 contas (Alice, Bob) pré-criadas com dados de demo.
-- [ ] **Abra os arquivos que vai mostrar em abas do editor** antes de começar, para não ficar procurando.
-- [ ] **Aumente a fonte do terminal e do editor** (Ctrl + +). O fundo da sala vai agradecer.
-- [ ] **Tenha Plano B:** se o Flask der erro ao vivo, tenha um **vídeo gravado** de 30s mostrando o ataque funcionando. Nunca confie 100% na internet da sala.
-- [ ] **Ninguém lê slide.** Os slides são suporte, o foco é o código e a demo.
-- [ ] **Saiba explicar por que** cada escolha foi feita (Blueprint, Extension, IDOR e não outra vuln). O professor pode perguntar.
+Buscar o recurso pelo ID e pelo dono:
 
----
-
-## Perguntas que o professor pode fazer (preparadas)
-
-1. **"Por que escolheram IDOR?"**
-   > É OWASP Top 1 em 2021. Representa uma falha de lógica de autorização, diferente de falhas de sintaxe como SQLi ou XSS — então mostra que pensamos em segurança além do óbvio.
-
-2. **"Como vocês saberiam que essa vuln existe em produção?"**
-   > Testes de penetração, revisão de código focada em verificar se toda query que carrega recurso por ID também filtra pelo dono, e ferramentas como Burp Suite para interceptar e alterar IDs.
-
-3. **"Por que usar ORM em vez de SQL puro?"**
-   > SQLAlchemy parametriza queries automaticamente, prevenindo SQL Injection, e torna o código mais legível e manutenível. SQL puro só faz sentido para queries de alta performance muito específicas.
-
-4. **"Qual a diferença entre Autenticação e Autorização?"**
-   > Autenticação = *quem* é você (login). Autorização = *o que* você pode fazer (permissões). IDOR é uma falha de **autorização** — o usuário está autenticado, mas consegue fazer algo que não deveria.
-
-5. **"Por que cookie e não sessão para o modo de visualização?"**
-   > Sessão guarda no servidor (memória/banco) e some ao deslogar. Cookie fica no cliente, sobrevive ao logout, não ocupa recurso do servidor — perfeito para preferência simples de UI.
+```python
+Task.query.filter_by(id=task_id, user_id=current_user.id).first_or_404()
+```

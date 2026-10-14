@@ -26,6 +26,12 @@ def create_app(config_class=Config):
     app.register_blueprint(auth_bp)
     app.register_blueprint(tasks_bp)
 
+    # Atalhos sem prefixo /auth para os exploits ficarem mais limpos na demo
+    from app.auth import routes as auth_routes
+    app.add_url_rule('/profile/<int:user_id>', view_func=auth_routes.view_profile, methods=['GET'])
+    app.add_url_rule('/profile/<int:user_id>/edit', view_func=auth_routes.edit_profile, methods=['GET', 'POST'], endpoint='edit_profile_short')
+    app.add_url_rule('/profile/<int:user_id>/change-password', view_func=auth_routes.change_password, methods=['GET', 'POST'], endpoint='change_password_short')
+
     with app.app_context():
         db.create_all()
 

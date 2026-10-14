@@ -1,0 +1,293 @@
+ROTEIRO RÁPIDO DE APRESENTAÇÃO - TASKHUB
+Projeto de Coding for Security / Flask
+
+OBJETIVO DA DEMO
+Mostrar que o sistema funciona normalmente, depois demonstrar as vulnerabilidades intencionais e, no final, aplicar a correção ao vivo.
+
+IMPORTANTE:
+As vulnerabilidades sao propositais. Nao falar como "erro sem querer".
+Falar sempre como "vulnerabilidade implementada para fins educacionais".
+
+============================================================
+0. PREPARAR ANTES DE COMEÇAR
+============================================================
+
+No terminal, dentro da pasta do projeto:
+
+    python reset.py
+    python start.py
+
+FALA:
+"Primeiro eu reseto o banco pra garantir que Alice e Bob existem, e subo o servidor.
+O próprio start.py ja mostra as URLs dos exploits que vamos usar na demo."
+
+Abrir no navegador:
+
+    http://127.0.0.1:5000
+
+============================================================
+1. LOGIN COMO ATACANTE
+============================================================
+
+Logar como Bob:
+
+    email: bob@taskhub.com
+    senha: 123456
+
+FALA:
+"Estou logado como Bob. Ele é um usuário normal, não é admin e não deveria acessar nada da Alice."
+
+============================================================
+2. EXPLOIT 1 - VER PERFIL DA ALICE
+============================================================
+
+No navegador, trocar a URL para:
+
+    /profile/1
+
+Mostrar que abriu o perfil da Alice.
+
+FALA:
+"Mesmo logado como Bob, eu consigo acessar /profile/1, que e o perfil da Alice.
+Isso é IDOR: o sistema confia no ID da URL e não valida se o recurso pertence ao usuário logado."
+
+============================================================
+3. MOSTRAR NO CODIGO A FALHA DO PERFIL
+============================================================
+
+Abrir no VS Code:
+
+    app/auth/routes.py
+
+Procurar a rota:
+
+    /profile/<id>
+
+Mostrar a parte vulneravel, algo como:
+
+    user = User.query.get_or_404(user_id)
+
+FALA:
+"O problema esta aqui. A rota busca o usuario apenas pelo ID.
+O login_required só prova que existe alguém logado, mas não prova que esse alguém pode ver esse perfil."
+
+============================================================
+4. EXPLOIT 2 - EDITAR PERFIL DA ALICE
+============================================================
+
+Ainda logado como Bob, trocar a URL para:
+
+    /profile/1/edit
+
+Alterar algo simples na bio, por exemplo:
+
+    Alterado pelo Bob na demo
+
+Salvar.
+
+FALA:
+"Agora piora: Bob nao so ve o perfil da Alice, ele também consegue editar.
+A falha e a mesma: o backend aceita o ID vindo da URL sem conferir ownership."
+
+Se quiser mencionar upload:
+"Alem disso, essa rota também demonstra upload inseguro, porque o sistema permite alterar dados e enviar arquivo sem validação forte."
+
+============================================================
+5. MOSTRAR NO CODIGO A FALHA DA EDICAO DE PERFIL
+============================================================
+
+Ainda em:
+
+    app/auth/routes.py
+
+Procurar a rota:
+
+    /profile/<id>/edit
+
+Mostrar a parte vulneravel:
+
+    user = User.query.get_or_404(user_id)
+
+FALA:
+"De novo, a consulta so usa o ID.
+O correto seria permitir edição apenas se user.id for igual ao current_user.id."
+
+============================================================
+6. EXPLOIT 3 - BYPASS DE 2FA NA TROCA DE SENHA
+============================================================
+
+Trocar a URL para:
+
+    /profile/1/change-password
+
+Mostrar que pede 2FA.
+
+Depois trocar a URL para:
+
+    /profile/1/change-password?bypass_2fa=admin_override_2024
+
+Trocar a senha da Alice.
+
+FALA:
+"A Alice tem 2FA ativo. Sem o parametro, o sistema tenta proteger.
+Mas existe um bypass por query string, como se fosse um override de admin esquecido.
+Com isso, Bob consegue trocar a senha da Alice sem o código."
+
+============================================================
+7. MOSTRAR NO CODIGO A FALHA DO 2FA
+============================================================
+
+No VS Code, ainda em:
+
+    app/auth/routes.py
+
+Procurar a rota:
+
+    /profile/<id>/change-password
+
+Mostrar a lógica do bypass, algo como:
+
+    bypass = request.args.get("bypass_2fa")
+
+ou:
+
+    if bypass_2fa == "admin_override_2024":
+
+FALA:
+"Aqui esta o problema: existe uma condição que aceita um parametro da URL pra pular a verificacao de 2FA.
+Isso nunca deveria existir em produção.
+Mesmo em uma area admin real, teria que ter autenticacao forte, auditoria e permissão explícita."
+
+============================================================
+8. EXPLOIT 4 - EDITAR TAREFA PRIVADA DA ALICE
+============================================================
+
+Trocar a URL para:
+
+    /tasks/edit/1
+
+Mostrar a tarefa:
+
+    Senha do servidor de produção
+
+FALA:
+"Agora o mesmo conceito aplicado a tarefas.
+Bob acessa /tasks/edit/1 e ve uma tarefa privada da Alice.
+Como os IDs sao sequenciais, é fácil chutar ou enumerar."
+
+============================================================
+9. MOSTRAR NO CODIGO A FALHA DA TAREFA
+============================================================
+
+Abrir no VS Code:
+
+    app/tasks/routes.py
+
+Procurar a rota:
+
+    /tasks/edit/<id>
+
+Mostrar o trecho vulneravel:
+
+    task = Task.query.get_or_404(task_id)
+
+FALA:
+"Esse e o exemplo mais clássico de IDOR.
+A rota pega a tarefa só pelo task_id.
+Entao se a tarefa existe, ela abre, mesmo sendo de outra pessoa."
+
+============================================================
+10. MOSTRAR O CODIGO CORRIGIDO ANTES DE RODAR O FIX
+============================================================
+
+Ainda em:
+
+    app/tasks/routes.py
+
+Mostrar ou explicar a versao corrigida:
+
+    task = Task.query.filter_by(
+        id=task_id,
+        user_id=current_user.id
+    ).first_or_404()
+
+FALA:
+"A correção e buscar pelo ID da tarefa e pelo ID do usuário logado ao mesmo tempo.
+Se a tarefa existe, mas e da Alice, e quem está logado e Bob, a query nao retorna nada."
+
+Para perfil, explicar o equivalente:
+
+    if user.id != current_user.id:
+        return patched_page_or_abort()
+
+FALA:
+"No perfil e a mesma lógica: antes de mostrar ou editar, compara o dono do recurso com current_user.id."
+
+============================================================
+11. RODAR A CORRECAO AO VIVO
+============================================================
+
+No terminal:
+
+    python fix.py
+
+FALA:
+"Agora eu aplico o patch.
+O fix.py muda o estado da aplicação para patched e todas as rotas vulneraveis passam a bloquear os exploits."
+
+============================================================
+12. TESTAR DE NOVO OS MESMOS EXPLOITS
+============================================================
+
+Voltar no navegador e tentar de novo:
+
+    /profile/1
+    /profile/1/edit
+    /profile/1/change-password?bypass_2fa=admin_override_2024
+    /tasks/edit/1
+
+FALA:
+"Agora os mesmos ataques nao funcionam mais.
+Em vez de abrir o recurso da Alice, o sistema mostra a página de vulnerabilidade corrigida.
+Issó prova o antes e depois da correção."
+
+============================================================
+13. FECHAMENTO CURTO
+============================================================
+
+FALA FINAL:
+"A falha principal nao era login. O Bob estava logado corretamente.
+O problema era autorização: o sistema nao verificava se o recurso acessado pelo ID realmente pertencia ao Bob.
+Depois do patch, cada rota valida ownership antes de retornar dados ou permitir alteracao."
+
+============================================================
+COLA ULTRA RAPIDA
+============================================================
+
+1. python reset.py
+2. python start.py
+3. Login Bob: bob@taskhub.com / 123456
+4. Acessar /profile/1
+5. Mostrar app/auth/routes.py
+6. Acessar /profile/1/edit
+7. Mostrar rota edit profile
+8. Acessar /profile/1/change-password?bypass_2fa=admin_override_2024
+9. Mostrar bypass no código
+10. Acessar /tasks/edit/1
+11. Mostrar app/tasks/routes.py -> get_or_404(task_id)
+12. Mostrar correção -> filter_by(id=task_id, user_id=current_user.id)
+13. Rodar python fix.py
+14. Testar URLs de novo
+15. Fechar explicando autenticacao vs autorização
+
+============================================================
+DICA PARA NÃO SE PERDER
+============================================================
+
+A ordem mental e:
+
+1. Explora no navegador
+2. Mostra a falha no código
+3. Explica a correção
+4. Roda fix.py
+5. Repete o ataque e mostra que bloqueou

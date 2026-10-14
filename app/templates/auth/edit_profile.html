@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="form-page">
+    <div class="form-card">
+        <div class="form-card-header">
+            <a href="{{ url_for('auth.view_profile', user_id=user.id) }}" class="back-link">← Voltar ao perfil</a>
+            <h1>Editar perfil de {{ user.username }}</h1>
+        </div>
+
+        <form method="POST" action="{{ url_for('auth.edit_profile', user_id=user.id) }}"
+              enctype="multipart/form-data" novalidate>
+            {{ form.hidden_tag() }}
+
+            <div class="profile-edit-current">
+                {% if user.profile_pic %}
+                    <img src="{{ url_for('static', filename='uploads/' + user.profile_pic) }}"
+                         alt="Foto atual" class="profile-photo-sm">
+                {% else %}
+                    <div class="profile-avatar-sm">{{ user.username[0]|upper }}</div>
+                {% endif %}
+                <div>
+                    <strong>{{ user.display_name or user.username }}</strong>
+                    <p class="form-meta">@{{ user.username }} · {{ user.email }}</p>
+                </div>
+            </div>
+
+            <div class="form-group">
+                {{ form.display_name.label }}
+                {{ form.display_name(class="form-control", placeholder="Como você quer ser chamado") }}
+            </div>
+
+            <div class="form-group">
+                {{ form.bio.label }}
+                {{ form.bio(class="form-control textarea", rows=3, placeholder="Algumas palavras sobre você (opcional)") }}
+            </div>
+
+            <div class="form-group">
+                {{ form.profile_pic.label }}
+                {{ form.profile_pic(class="form-control file-input") }}
+                <small class="form-meta">Selecione uma imagem do seu dispositivo.</small>
+            </div>
+
+            <div class="form-group form-checkbox">
+                {{ form.twofa_enabled() }}
+                {{ form.twofa_enabled.label }}
+                <small class="form-meta">Quando ativo, alterações de senha exigirão um código 2FA.</small>
+            </div>
+
+            <div class="form-actions">
+                <a href="{{ url_for('auth.view_profile', user_id=user.id) }}" class="btn btn-ghost">Cancelar</a>
+                {{ form.submit(class="btn btn-primary") }}
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

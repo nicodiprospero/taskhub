@@ -1,146 +1,270 @@
 {% extends "base.html" %}
 {% block content %}
+
+{% set total = tasks|length %}
+{% set count_pending = tasks|selectattr('status','equalto','pending')|list|length %}
+{% set count_progress = tasks|selectattr('status','equalto','in_progress')|list|length %}
+{% set count_done = tasks|selectattr('status','equalto','done')|list|length %}
+{% set count_overdue = tasks|selectattr('is_overdue')|list|length %}
+
 <div class="page-header">
     <div>
-        <h1>&#128203; Minhas Tarefas</h1>
-        <p class="page-subtitle">{{ tasks|length }} tarefa(s) encontrada(s)</p>
+        <h1>Suas tarefas</h1>
+        <p class="page-subtitle">
+            {% if total == 0 %}Comece criando sua primeira tarefa.
+            {% elif total == 1 %}1 tarefa encontrada.
+            {% else %}{{ total }} tarefas encontradas.{% endif %}
+        </p>
     </div>
-    <a href="{{ url_for('tasks.create') }}" class="btn btn-primary">+ Nova Tarefa</a>
+    <a href="{{ url_for('tasks.create') }}" class="btn btn-primary">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Nova tarefa
+    </a>
 </div>
 
-<!-- Search + View Toggle -->
-<div class="toolbar">
-    <form method="GET" action="{{ url_for('tasks.index') }}" class="search-form">
-        <div class="search-wrapper">
-            <input
-                type="text"
-                name="search"
-                class="form-control search-input"
-                placeholder="Buscar tarefas..."
-                value="{{ search }}"
-            >
-            <button type="submit" class="btn btn-primary">Buscar</button>
-            {% if search %}
-                <a href="{{ url_for('tasks.index') }}" class="btn btn-ghost">Limpar</a>
-            {% endif %}
-        </div>
-    </form>
+<!-- Stats dashboard -->
+{% if total > 0 or count_overdue > 0 %}
+<div class="stats-grid">
+    <div class="stat-card stat-total">
+        <div class="stat-label">Total</div>
+        <div class="stat-value">{{ total }}</div>
+    </div>
+    <div class="stat-card stat-pending">
+        <div class="stat-label">Pendentes</div>
+        <div class="stat-value">{{ count_pending }}</div>
+    </div>
+    <div class="stat-card stat-in_progress">
+        <div class="stat-label">Em progresso</div>
+        <div class="stat-value">{{ count_progress }}</div>
+    </div>
+    <div class="stat-card stat-done">
+        <div class="stat-label">Concluídas</div>
+        <div class="stat-value">{{ count_done }}</div>
+    </div>
+    {% if count_overdue > 0 %}
+    <div class="stat-card stat-overdue">
+        <div class="stat-label">Atrasadas</div>
+        <div class="stat-value">{{ count_overdue }}</div>
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+
+<!-- Filtros + Busca -->
+<form method="GET" action="{{ url_for('tasks.index') }}" class="filter-bar">
+    <div class="filter-group filter-search">
+        <input type="text" name="search" class="form-control"
+               placeholder="Buscar por título..." value="{{ search }}" autocomplete="off">
+    </div>
+
+    <div class="filter-group">
+        <select name="status" class="form-control form-select" onchange="this.form.submit()">
+            <option value="">Todos status</option>
+            <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pendentes</option>
+            <option value="in_progress" {% if status_filter == 'in_progress' %}selected{% endif %}>Em progresso</option>
+            <option value="done" {% if status_filter == 'done' %}selected{% endif %}>Concluídas</option>
+        </select>
+    </div>
+
+    <div class="filter-group">
+        <select name="priority" class="form-control form-select" onchange="this.form.submit()">
+            <option value="">Toda prioridade</option>
+            <option value="high" {% if priority_filter == 'high' %}selected{% endif %}>Alta</option>
+            <option value="medium" {% if priority_filter == 'medium' %}selected{% endif %}>Média</option>
+            <option value="low" {% if priority_filter == 'low' %}selected{% endif %}>Baixa</option>
+        </select>
+    </div>
+
+    <div class="filter-group">
+        <select name="sort" class="form-control form-select" onchange="this.form.submit()">
+            <option value="created_desc" {% if sort == 'created_desc' %}selected{% endif %}>Mais recentes</option>
+            <option value="created_asc" {% if sort == 'created_asc' %}selected{% endif %}>Mais antigas</option>
+            <option value="due_asc" {% if sort == 'due_asc' %}selected{% endif %}>Vencimento próximo</option>
+            <option value="priority" {% if sort == 'priority' %}selected{% endif %}>Prioridade</option>
+            <option value="title" {% if sort == 'title' %}selected{% endif %}>Título (A-Z)</option>
+        </select>
+    </div>
+
+    <div class="filter-group filter-actions">
+        <button type="submit" class="btn btn-soft btn-sm">Aplicar</button>
+        {% if search or status_filter or priority_filter or tag_filter or sort != 'created_desc' %}
+            <a href="{{ url_for('tasks.index') }}" class="btn btn-ghost btn-sm">Limpar</a>
+        {% endif %}
+    </div>
 
     <div class="view-toggle">
         <a href="{{ url_for('tasks.set_view', mode='list') }}"
            class="btn btn-sm {% if view_mode == 'list' %}btn-primary{% else %}btn-ghost{% endif %}">
-            &#9776; Lista
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+            Lista
         </a>
         <a href="{{ url_for('tasks.set_view', mode='kanban') }}"
            class="btn btn-sm {% if view_mode == 'kanban' %}btn-primary{% else %}btn-ghost{% endif %}">
-            &#9707; Kanban
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="6" height="18" rx="1"/><rect x="10" y="3" width="6" height="12" rx="1"/><rect x="17" y="3" width="4" height="8" rx="1"/></svg>
+            Kanban
         </a>
     </div>
-</div>
+</form>
 
-{% if search %}
-<div class="search-info">
-    Resultados para: <strong>"{{ search }}"</strong>
+<!-- Filtro por tag (chips) -->
+{% if user_tags %}
+<div class="tag-filter-bar">
+    <span class="tag-filter-label">Tags:</span>
+    <a href="{{ url_for('tasks.index', search=search, status=status_filter, priority=priority_filter, sort=sort) }}"
+       class="tag {% if not tag_filter %}tag-active{% else %}tag-gray{% endif %}">todas</a>
+    {% for t in user_tags %}
+        <a href="{{ url_for('tasks.index', search=search, status=status_filter, priority=priority_filter, sort=sort, tag=t.name) }}"
+           class="tag tag-{{ t.color }} {% if tag_filter == t.name %}tag-active{% endif %}">#{{ t.name }}</a>
+    {% endfor %}
 </div>
 {% endif %}
 
 {% if tasks %}
-    {% if view_mode == 'kanban' %}
-    <!-- KANBAN VIEW -->
-    <div class="kanban-board">
-        {% set statuses = [('pending', 'Pendente'), ('in_progress', 'Em Progresso'), ('done', 'Concluída')] %}
-        {% for status_key, status_label in statuses %}
-        <div class="kanban-column">
-            <div class="kanban-header kanban-{{ status_key }}">
-                <span>{{ status_label }}</span>
-                <span class="kanban-count">
-                    {{ tasks | selectattr('status', 'equalto', status_key) | list | length }}
-                </span>
-            </div>
-            <div class="kanban-cards">
-                {% for task in tasks if task.status == status_key %}
-                    <div class="task-card priority-{{ task.priority }}">
-                        <div class="task-card-header">
-                            <span class="priority-badge priority-{{ task.priority }}">
-                                {% if task.priority == 'high' %}&#9650; Alta
-                                {% elif task.priority == 'medium' %}&#9654; Média
-                                {% else %}&#9660; Baixa{% endif %}
-                            </span>
+    <form method="POST" action="{{ url_for('tasks.bulk_delete') }}" id="bulk-form"
+          onsubmit="return confirm('Excluir as tarefas selecionadas?')">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="bulk-bar" id="bulk-bar" style="display:none">
+            <span><strong id="bulk-count">0</strong> selecionada(s)</span>
+            <button type="submit" class="btn btn-sm btn-danger">Excluir selecionadas</button>
+        </div>
+
+        {% if view_mode == 'kanban' %}
+        <!-- KANBAN -->
+        <div class="kanban-board">
+            {% set statuses = [('pending', 'Pendente'), ('in_progress', 'Em progresso'), ('done', 'Concluída')] %}
+            {% for status_key, status_label in statuses %}
+            <div class="kanban-column">
+                <div class="kanban-header kanban-{{ status_key }}">
+                    <span>{{ status_label }}</span>
+                    <span class="kanban-count">{{ tasks | selectattr('status', 'equalto', status_key) | list | length }}</span>
+                </div>
+                <div class="kanban-cards">
+                    {% for task in tasks if task.status == status_key %}
+                        <div class="task-card priority-{{ task.priority }} {% if task.is_overdue %}is-overdue{% endif %}">
+                            <div class="task-card-header">
+                                <label class="task-check">
+                                    <input type="checkbox" name="selected" value="{{ task.id }}" class="task-checkbox">
+                                </label>
+                                <span class="priority-badge priority-{{ task.priority }}">
+                                    {% if task.priority == 'high' %}Alta
+                                    {% elif task.priority == 'medium' %}Média
+                                    {% else %}Baixa{% endif %}
+                                </span>
+                                {% if task.is_overdue %}<span class="status-badge status-overdue">Atrasada</span>{% endif %}
+                            </div>
+                            <h3 class="task-title">
+                                <a href="{{ url_for('tasks.detail', task_id=task.id) }}">{{ task.title }}</a>
+                            </h3>
+                            {% if task.description %}
+                                <p class="task-desc">{{ task.description[:80] }}{% if task.description|length > 80 %}…{% endif %}</p>
+                            {% endif %}
+                            {% if task.tags %}
+                            <div class="tag-row">
+                                {% for tag in task.tags %}<span class="tag tag-{{ tag.color }}">#{{ tag.name }}</span>{% endfor %}
+                            </div>
+                            {% endif %}
+                            <div class="task-meta">
+                                {% if task.due_date %}
+                                <span class="task-date {% if task.is_overdue %}text-red{% endif %}">
+                                    📅 {{ task.due_date.strftime('%d/%m') }}
+                                </span>
+                                {% else %}
+                                <span class="task-date">{{ task.created_at.strftime('%d/%m') }}</span>
+                                {% endif %}
+                            </div>
+                            <div class="task-actions">
+                                <a href="{{ url_for('tasks.edit', task_id=task.id) }}" class="btn btn-sm btn-soft">Editar</a>
+                            </div>
                         </div>
-                        <h3 class="task-title">{{ task.title }}</h3>
+                    {% else %}
+                        <div class="kanban-empty">Nenhuma tarefa</div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        {% else %}
+        <!-- LIST -->
+        <div class="task-list">
+            {% for task in tasks %}
+            <div class="task-row priority-border-{{ task.priority }} {% if task.is_overdue %}is-overdue{% endif %}">
+                <div class="task-row-main">
+                    <label class="task-check">
+                        <input type="checkbox" name="selected" value="{{ task.id }}" class="task-checkbox">
+                    </label>
+                    <div class="task-row-info">
+                        <h3 class="task-title">
+                            <a href="{{ url_for('tasks.detail', task_id=task.id) }}">{{ task.title }}</a>
+                        </h3>
                         {% if task.description %}
-                            <p class="task-desc">{{ task.description[:80] }}{% if task.description|length > 80 %}...{% endif %}</p>
+                            <p class="task-desc">{{ task.description[:120] }}{% if task.description|length > 120 %}…{% endif %}</p>
                         {% endif %}
                         <div class="task-meta">
-                            <span class="task-date">{{ task.created_at.strftime('%d/%m/%Y') }}</span>
-                        </div>
-                        <div class="task-actions">
-                            <a href="{{ url_for('tasks.edit', task_id=task.id) }}" class="btn btn-sm btn-ghost">Editar</a>
-                            <form method="POST" action="{{ url_for('tasks.delete', task_id=task.id) }}" class="inline-form"
-                                  onsubmit="return confirm('Excluir esta tarefa?')">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                <button type="submit" class="btn btn-sm btn-danger">Excluir</button>
-                            </form>
+                            <span class="status-badge status-{{ task.status }}">
+                                {% if task.status == 'pending' %}Pendente
+                                {% elif task.status == 'in_progress' %}Em progresso
+                                {% else %}Concluída{% endif %}
+                            </span>
+                            <span class="priority-badge priority-{{ task.priority }}">
+                                {% if task.priority == 'high' %}Alta
+                                {% elif task.priority == 'medium' %}Média
+                                {% else %}Baixa{% endif %}
+                            </span>
+                            {% if task.is_overdue %}<span class="status-badge status-overdue">Atrasada</span>{% endif %}
+                            {% if task.due_date %}
+                                <span class="task-date {% if task.is_overdue %}text-red{% endif %}">
+                                    📅 {{ task.due_date.strftime('%d/%m/%Y') }}
+                                </span>
+                            {% endif %}
+                            {% for tag in task.tags %}
+                                <span class="tag tag-{{ tag.color }}">#{{ tag.name }}</span>
+                            {% endfor %}
                         </div>
                     </div>
-                {% else %}
-                    <div class="kanban-empty">Nenhuma tarefa</div>
-                {% endfor %}
-            </div>
-        </div>
-        {% endfor %}
-    </div>
-
-    {% else %}
-    <!-- LIST VIEW -->
-    <div class="task-list">
-        {% for task in tasks %}
-        <div class="task-row priority-border-{{ task.priority }}">
-            <div class="task-row-main">
-                <div class="task-row-info">
-                    <h3 class="task-title">{{ task.title }}</h3>
-                    {% if task.description %}
-                        <p class="task-desc">{{ task.description[:100] }}{% if task.description|length > 100 %}...{% endif %}</p>
-                    {% endif %}
-                    <div class="task-meta">
-                        <span class="status-badge status-{{ task.status }}">
-                            {% if task.status == 'pending' %}Pendente
-                            {% elif task.status == 'in_progress' %}Em Progresso
-                            {% else %}Concluída{% endif %}
-                        </span>
-                        <span class="priority-badge priority-{{ task.priority }}">
-                            {% if task.priority == 'high' %}&#9650; Alta
-                            {% elif task.priority == 'medium' %}&#9654; Média
-                            {% else %}&#9660; Baixa{% endif %}
-                        </span>
-                        <span class="task-date">{{ task.created_at.strftime('%d/%m/%Y %H:%M') }}</span>
+                    <div class="task-actions">
+                        <a href="{{ url_for('tasks.detail', task_id=task.id) }}" class="btn btn-sm btn-soft">Ver</a>
+                        <a href="{{ url_for('tasks.edit', task_id=task.id) }}" class="btn btn-sm btn-soft">Editar</a>
                     </div>
                 </div>
-                <div class="task-actions">
-                    <a href="{{ url_for('tasks.edit', task_id=task.id) }}" class="btn btn-sm btn-ghost">Editar</a>
-                    <form method="POST" action="{{ url_for('tasks.delete', task_id=task.id) }}" class="inline-form"
-                          onsubmit="return confirm('Tem certeza que deseja excluir esta tarefa?')">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <button type="submit" class="btn btn-sm btn-danger">Excluir</button>
-                    </form>
-                </div>
             </div>
+            {% endfor %}
         </div>
-        {% endfor %}
-    </div>
-    {% endif %}
+        {% endif %}
+    </form>
 
 {% else %}
     <div class="empty-state">
-        <div class="empty-icon">&#128203;</div>
-        <h2>Nenhuma tarefa encontrada</h2>
-        {% if search %}
-            <p>Nenhum resultado para "<strong>{{ search }}</strong>".</p>
-            <a href="{{ url_for('tasks.index') }}" class="btn btn-ghost">Ver todas as tarefas</a>
+        <div class="empty-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        </div>
+        {% if search or status_filter or priority_filter or tag_filter %}
+            <h2>Nada por aqui</h2>
+            <p>Nenhuma tarefa encontrada com esses filtros. Tente outros critérios ou limpe a busca.</p>
+            <a href="{{ url_for('tasks.index') }}" class="btn btn-ghost">Limpar filtros</a>
         {% else %}
-            <p>Você ainda não tem tarefas. Crie sua primeira agora!</p>
-            <a href="{{ url_for('tasks.create') }}" class="btn btn-primary">+ Criar Tarefa</a>
+            <h2>Tudo organizado</h2>
+            <p>Você ainda não tem tarefas. Comece criando a primeira agora — só leva alguns segundos.</p>
+            <a href="{{ url_for('tasks.create') }}" class="btn btn-primary">Criar minha primeira tarefa</a>
         {% endif %}
     </div>
 {% endif %}
+
+<script>
+// Bulk selection bar
+(function(){
+    const boxes = document.querySelectorAll('.task-checkbox');
+    const bar = document.getElementById('bulk-bar');
+    const counter = document.getElementById('bulk-count');
+    if (!boxes.length || !bar) return;
+    function update(){
+        const n = document.querySelectorAll('.task-checkbox:checked').length;
+        if (counter) counter.textContent = n;
+        bar.style.display = n > 0 ? 'flex' : 'none';
+    }
+    boxes.forEach(b => b.addEventListener('change', update));
+})();
+</script>
+
 {% endblock %}

@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="detail-wrapper">
+    <a href="{{ url_for('tasks.index') }}" class="back-link">← Voltar para tarefas</a>
+
+    <div class="detail-card priority-border-{{ task.priority }}">
+        <div class="detail-header">
+            <div class="detail-badges">
+                <span class="status-badge status-{{ task.status }}">
+                    {% if task.status == 'pending' %}Pendente
+                    {% elif task.status == 'in_progress' %}Em progresso
+                    {% else %}Concluída{% endif %}
+                </span>
+                <span class="priority-badge priority-{{ task.priority }}">
+                    Prioridade
+                    {% if task.priority == 'high' %}alta
+                    {% elif task.priority == 'medium' %}média
+                    {% else %}baixa{% endif %}
+                </span>
+                {% if task.is_overdue %}
+                    <span class="status-badge status-overdue">Atrasada</span>
+                {% endif %}
+            </div>
+
+            <h1 class="detail-title">{{ task.title }}</h1>
+
+            {% if task.tags %}
+            <div class="tag-row">
+                {% for tag in task.tags %}
+                    <a href="{{ url_for('tasks.index', tag=tag.name) }}" class="tag tag-{{ tag.color }}">#{{ tag.name }}</a>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="detail-body">
+            {% if task.description %}
+                <div class="detail-section">
+                    <h3>Descrição</h3>
+                    <div class="detail-description">{{ task.description }}</div>
+                </div>
+            {% else %}
+                <p class="detail-empty">Sem descrição.</p>
+            {% endif %}
+        </div>
+
+        <div class="detail-meta">
+            <div class="detail-meta-item">
+                <span class="detail-meta-label">Criada em</span>
+                <span class="detail-meta-value">{{ task.created_at.strftime('%d/%m/%Y às %H:%M') }}</span>
+            </div>
+            <div class="detail-meta-item">
+                <span class="detail-meta-label">Atualizada em</span>
+                <span class="detail-meta-value">{{ task.updated_at.strftime('%d/%m/%Y às %H:%M') }}</span>
+            </div>
+            {% if task.due_date %}
+            <div class="detail-meta-item">
+                <span class="detail-meta-label">Data de entrega</span>
+                <span class="detail-meta-value {% if task.is_overdue %}text-red{% endif %}">
+                    {{ task.due_date.strftime('%d/%m/%Y') }}
+                    {% if task.is_overdue %}
+                        ({{ -task.days_until_due }} dia(s) atrasada)
+                    {% elif task.days_until_due == 0 %}
+                        (hoje)
+                    {% elif task.days_until_due > 0 %}
+                        (em {{ task.days_until_due }} dia(s))
+                    {% endif %}
+                </span>
+            </div>
+            {% endif %}
+            {% if task.completed_at %}
+            <div class="detail-meta-item">
+                <span class="detail-meta-label">Concluída em</span>
+                <span class="detail-meta-value">{{ task.completed_at.strftime('%d/%m/%Y às %H:%M') }}</span>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="detail-actions">
+            {% if task.status != 'done' %}
+                <form method="POST" action="{{ url_for('tasks.quick_status', task_id=task.id, status='done') }}" class="inline-form">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-primary">✓ Marcar como concluída</button>
+                </form>
+            {% endif %}
+            {% if task.status == 'pending' %}
+                <form method="POST" action="{{ url_for('tasks.quick_status', task_id=task.id, status='in_progress') }}" class="inline-form">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-soft">Iniciar</button>
+                </form>
+            {% endif %}
+            <a href="{{ url_for('tasks.edit', task_id=task.id) }}" class="btn btn-soft">Editar</a>
+            <form method="POST" action="{{ url_for('tasks.delete', task_id=task.id) }}" class="inline-form"
+                  onsubmit="return confirm('Excluir esta tarefa?')">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-danger">Excluir</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
