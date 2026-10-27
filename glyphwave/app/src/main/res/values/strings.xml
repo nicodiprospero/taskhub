@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">GlyphWave</string>
+    <string name="toy_name">GlyphWave</string>
+    <string name="toy_summary">YouTube Music visualizer. Long press for actions.</string>
+</resources>

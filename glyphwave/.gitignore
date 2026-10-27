@@ -1,0 +1,21 @@
+# Gradle / build
+.gradle/
+build/
+local.properties
+.kotlin/
+captures/
+*.apk
+*.aab
+
+# IDE
+.idea/
+*.iml
+.DS_Store
+
+# Nothing Glyph Matrix SDK — licence forbids redistribution. See app/libs/README.md
+app/libs/*.aar
+
+# Signing — never commit
+keystore.properties
+*.jks
+*.keystore
