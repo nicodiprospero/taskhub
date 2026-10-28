@@ -52,6 +52,29 @@ object MatrixPng {
         ImageIO.write(img, "png", file)
     }
 
+    /** Several frames side by side with one caption. */
+    fun sheet(frames: List<IntArray>, mask: CircleMask, file: File, caption: String, cell: Int = 16) {
+        val tmp = frames.mapIndexed { i, f -> File.createTempFile("gw$i", ".png").also { write(f, mask, it, cell) } }
+        val images = tmp.map { ImageIO.read(it) }
+        val captionH = cell * 2
+        val sheet = BufferedImage(images.sumOf { it.width }, images.maxOf { it.height } + captionH, BufferedImage.TYPE_INT_RGB)
+        val g = sheet.createGraphics()
+        g.color = Color.BLACK
+        g.fillRect(0, 0, sheet.width, sheet.height)
+        var x = 0
+        for (img in images) {
+            g.drawImage(img, x, 0, null)
+            x += img.width
+        }
+        g.color = Color(200, 200, 200)
+        g.font = g.font.deriveFont(cell * 0.9f)
+        g.drawString(caption, cell, sheet.height - cell / 2)
+        g.dispose()
+        tmp.forEach { it.delete() }
+        file.parentFile.mkdirs()
+        ImageIO.write(sheet, "png", file)
+    }
+
     fun outputDir(): File =
         File(System.getProperty("glyphwave.previewDir") ?: "build/matrix-previews")
 }

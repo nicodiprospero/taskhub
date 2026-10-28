@@ -37,10 +37,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.nicodiprospero.glyphwave.debug.GlyphEvent
 import dev.nicodiprospero.glyphwave.engine.Engine
 import dev.nicodiprospero.glyphwave.glyph.CircleMask
-import dev.nicodiprospero.glyphwave.glyph.MatrixCanvas
 import dev.nicodiprospero.glyphwave.glyph.MatrixSpec
 import dev.nicodiprospero.glyphwave.glyph.TestPattern
-import dev.nicodiprospero.glyphwave.glyph.TestPatterns
 
 /** Diagnostics screen: media session, toy status, test pattern preview + picker, raw Glyph event log. */
 @OptIn(ExperimentalLayoutApi::class)
@@ -57,10 +55,6 @@ fun DebugScreen(
 
     val length = status.matrixLength ?: MatrixSpec.DEFAULT_LENGTH
     val mask = remember(length) { CircleMask(length) }
-    // Same core code the toy uses, so the preview is exactly what goes to setMatrixFrame.
-    val frame = remember(length, pattern) {
-        MatrixCanvas(length).also { TestPatterns.render(pattern, it, mask) }.pixels
-    }
 
     LazyColumn(
         modifier = Modifier
@@ -73,8 +67,10 @@ fun DebugScreen(
         item {
             Spacer(Modifier.height(8.dp))
             Text("GLYPHWAVE", style = GwType.Heading)
-            Text("PHASE 2 · DIAGNOSTICS", style = GwType.Label)
+            Text("PHASE 3 · VISUALIZER", style = GwType.Label)
         }
+
+        item { VisualizerSection() }
 
         item { AudioSection() }
 
@@ -101,25 +97,18 @@ fun DebugScreen(
         }
 
         item {
-            Section("TEST PATTERN") {
-                MatrixPreview(
-                    frame = frame,
-                    mask = mask,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .widthIn(max = 360.dp)
-                        .align(Alignment.CenterHorizontally)
-                        .padding(8.dp),
+            Section("TEST PATTERNS") {
+                Text(
+                    pattern?.question ?: "The toy shows the visualizer. Pick a pattern to check the hardware.",
+                    style = GwType.Body,
                 )
-                Text(pattern.title.uppercase(), style = GwType.Label.copy(color = GwColors.White))
-                Text(pattern.question, style = GwType.Body)
-                Spacer(Modifier.height(4.dp))
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Chip("Visualizer", selected = pattern == null) { Engine.testPattern.value = null }
                     TestPattern.entries.forEach { p ->
                         Chip(p.title, selected = p == pattern) { Engine.testPattern.value = p }
                     }
                 }
-                Text("Long press on the Glyph Button also cycles patterns.", style = GwType.Label)
+                Text("While a pattern is shown, long press cycles patterns.", style = GwType.Label)
             }
         }
 

@@ -222,17 +222,62 @@ an auto-gained level.
 - The toy shows `AUDIO_LEVEL` (a disc that grows with the auto-gained level, 30 fps) while the engine runs. This is the
   latency and screen-off probe until the real modes land in Phase 3.
 
-### D-023 · Phase 2 report — source evaluation on the owner's Phone (3)
-_To be filled from the on-device test._
+### D-023 · Phase 2 report — source evaluation on the owner's Phone (3) (2026-10-28)
 
 | | A · Visualizer (session 0) | B · Playback capture |
 |---|---|---|
-| Starts without error | TBD | TBD |
-| Signal with YT Music playing (not silent) | TBD | TBD |
-| Block rate (blocks/s) | TBD | TBD |
-| Keeps working with the screen off (matrix disc still moves) | TBD | TBD |
-| Perceived latency (disc vs beat) | TBD | TBD |
-| CPU (`top`, app process) | TBD | TBD |
-| Notes (consent dialog, single-app share, …) | TBD | TBD |
+| Starts without error | ✅ | ✅ (consent dialog each start) |
+| Signal with YT Music playing | ✅ (no silence alarm) | ✅ (YT Music does **not** opt out of capture) |
+| Keeps working with the screen off | ✅ | ✅ |
+| Perceived latency (level disc vs beat) | "okay" | "quite the same" |
+| Block rate / CPU | not measured by owner, so Phase 6 battery pass | idem |
+| UX | no prompt, no indicator | screen-recording consent + system cast indicator for the whole session |
 
-**Default:** TBD (provisional default: A, because it needs no consent dialog).
+**Default: A (Visualizer).** It does the job, survives screen-off, and needs no ongoing screen-recording consent, which
+the owner explicitly doesn't want. **B remains selectable** as a fallback (and gives 60 blocks/s and 16-bit
+resolution if A ever goes silent after an OS update). `SettingsRepository.DEFAULT_AUDIO_SOURCE = VISUALIZER`.
+
+Owner feedback that shaped Phase 3: *"it's mixing graves and agudos in the same visual, so sometimes it looks out of
+tempo; I'd like either a distinction or modes that focus on 808s or highs"*. See D-024 and D-025.
+
+---
+
+## Phase 3 — DSP, modes, live preview
+
+### D-024 · DSP pipeline (core, unit-tested)
+`AudioAnalyzer`: ring buffer → `Fft` (1024, Hann, amplitude-normalised) → `SpectrumProcessor` (32 log bands
+40 Hz–16 kHz, dB, auto-gain against a running peak decaying 6 dB/s over a 42 dB window, attack 15 ms / release
+180 ms, peak hold 300 ms then gravity) → range energies (bass 30–150 Hz, mid 150 Hz–2 kHz, high 4–16 kHz, each
+auto-gained + smoothed) → `BeatDetector` on bass energy (1.4× the 1 s rolling average, 250 ms refractory, strength 0..1).
+- **The beat is gated on bass dominance** (bass ≥ 35 % of the full-band amplitude). Without the gate, hi-hats
+  fired beats in the synthetic test: broadband noise leaks into the bass bins, and relative to its own quiet average it
+  spikes. This is exactly the "looks out of tempo" symptom the owner described, so beats now come from kick/808 only.
+- Low-end resolution limit: 1024 points at 48 kHz = 47 Hz bins. 808 fundamentals (40–60 Hz) all land in
+  bins 1–2, so the "808s" focus shows energy and punch, not exact pitch. Source B could use a longer FFT later.
+  Source A is capped at 1024 by the platform.
+- Measured on the synthetic 120 BPM track: one beat every 500 ms ± 50 at both 60 Hz (B) and 20 Hz (A) block rates,
+  zero beats on hats only, ≤ 1 on a steady bass tone. Tests: `BeatDetectorTest`, `SpectrumProcessorTest`, `FftTest`.
+
+### D-025 · Modes and focus (answering the owner's feedback)
+1. **Radial**: mirrored wedges, bass at the bottom and highs at the top, with peak dots. The core flashes on beats.
+2. **Bars**: one bar per column, clipped to the circle, with falling peak dots.
+3. **Pulse**: the bass sets the main ring radius, the mids a dim inner ring. Each beat launches a ring outward and flashes the rim.
+4. **Bass · Treble** (new, from the owner's request): separate zones. The centre disc is bass, the outer ring is a treble
+   sparkle, and a thin dim ring is the mids. A hi-hat can never move the kick visual.
+- **Focus** (Full / 808s / Mids / Highs) zooms Radial and Bars into one range. `BandView` re-gains locally, because
+  with the global gain "808s" saturated and "Highs" barely moved (hats sit ~20 dB under the kick). The local gain
+  **resets when the focus changes**: a test caught 808s → Highs going dark because the bass level carried over.
+- Idle: a breathing dot (perceived 7–17 %). With the engine stopped, a dim arc on the bottom rim hints "start the engine".
+  Idle shows when the engine is off, or after 1.5 s of silence.
+- Long press = next mode (the brief's default mapping) until Phase 4's recognizer. The choice is persisted.
+
+### D-026 · `MatrixMode.render(audio, media, tMs, canvas: MatrixCanvas)`
+This deviates from the brief's `out: IntArray`: the canvas wraps the same array and gives clipping plus a 0..1 API. Modes
+draw **perceived** brightness. `MatrixRenderer` then applies mask → `OutputStage` (gamma LUT 2.2 + brightness cap,
+default 80 %) → drive values. Gamma, brightness and fps (30/60) are settings.
+
+### D-027 · One renderer for toy, app preview and PNGs
+`Engine.renderer()` is shared. While the toy renders, it publishes each frame (`Engine.matrixFrame`) and the app
+preview mirrors it. When the toy isn't active, the app drives the same renderer itself, so modes can be tuned with the
+phone face up. `:core:renderPreviews` uses the same `MatrixRenderer` on synthetic audio, so the PNGs match the device.
+The render path is allocation-free (frames, LUT and BandViews are preallocated). Slow frames > 8 ms and slow analysis > 4 ms are logged.

@@ -14,9 +14,9 @@ import android.os.IBinder
 import android.util.Log
 import dev.nicodiprospero.glyphwave.R
 import dev.nicodiprospero.glyphwave.TAG
+import dev.nicodiprospero.glyphwave.engine.AudioFrame
 import dev.nicodiprospero.glyphwave.engine.AudioStatus
 import dev.nicodiprospero.glyphwave.engine.Engine
-import dev.nicodiprospero.glyphwave.glyph.TestPattern
 import dev.nicodiprospero.glyphwave.media.MediaBridge
 import dev.nicodiprospero.glyphwave.ui.MainActivity
 import kotlinx.coroutines.CoroutineScope
@@ -35,6 +35,8 @@ class AudioEngineService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var source: AudioSource? = null
     private val meter = LevelMeter()
+    private val analyzer = AudioAnalyzer()
+    private val frame = AudioFrame()
     @Volatile private var lastPublishNanos = 0L
     @Volatile private var lastStatsNanos = 0L
     private var warnedSilent = false
@@ -95,10 +97,10 @@ class AudioEngineService : Service() {
         }
 
         meter.reset()
+        analyzer.reset()
         warnedSilent = false
         source = src
         Engine.publishAudio(AudioStatus(running = true, source = id))
-        Engine.testPattern.value = TestPattern.AUDIO_LEVEL
         scope.launch { src.frames.collect { onBlock(id, it) } }
         scope.launch {
             src.errors.collect { msg ->
@@ -119,6 +121,11 @@ class AudioEngineService : Service() {
     private fun onBlock(id: SourceId, block: RawAudio) {
         meter.process(block.samples, block.count, block.timestampNanos)
         Engine.audioLevel = meter.level
+        val frameStart = System.nanoTime()
+        analyzer.process(block.samples, block.count, block.sampleRate, block.timestampNanos, frame)
+        Engine.audioFrames.publish(frame)
+        val analysisUs = (System.nanoTime() - frameStart) / 1_000
+        if (analysisUs > SLOW_ANALYSIS_US) Log.w(TAG, "AUDIO slow analysis ${analysisUs}us")
 
         val now = block.timestampNanos
         if (now - lastPublishNanos < PUBLISH_INTERVAL_NANOS) return
@@ -169,6 +176,7 @@ class AudioEngineService : Service() {
         source?.stop()
         source = null
         Engine.audioLevel = 0f
+        Engine.audioFrames.clear()
     }
 
     override fun onDestroy() {
@@ -215,6 +223,7 @@ class AudioEngineService : Service() {
         private const val PUBLISH_INTERVAL_NANOS = 100_000_000L // 10 Hz UI snapshots
         private const val STATS_INTERVAL_NANOS = 5_000_000_000L
         private const val SILENCE_ALARM_MS = 2_000L
+        private const val SLOW_ANALYSIS_US = 4_000L
 
         fun startVisualizer(context: Context) {
             context.startForegroundService(

@@ -17,7 +17,10 @@ import com.nothing.ketchum.Glyph
 import com.nothing.ketchum.GlyphException
 import com.nothing.ketchum.GlyphMatrixManager
 import com.nothing.ketchum.GlyphToy
+import dev.nicodiprospero.glyphwave.GlyphWaveApp
 import dev.nicodiprospero.glyphwave.TAG
+import dev.nicodiprospero.glyphwave.engine.AudioFrame
+import dev.nicodiprospero.glyphwave.media.MediaBridge
 import dev.nicodiprospero.glyphwave.debug.GlyphEvent
 import dev.nicodiprospero.glyphwave.engine.Engine
 import kotlinx.coroutines.CoroutineScope
@@ -109,17 +112,10 @@ class GlyphWaveToyService : Service() {
             }
             scope?.launch {
                 Engine.testPattern.collectLatest { pattern ->
-                    if (!pattern.animated) {
-                        show(pattern)
-                        return@collectLatest
-                    }
-                    // Phase 2 render loop (30 fps). Replaced by the mode renderer in Phase 3.
-                    while (currentCoroutineContext().isActive) {
-                        val start = SystemClock.elapsedRealtimeNanos()
-                        show(pattern, Engine.audioLevel, logFrame = false)
-                        val tookMs = (SystemClock.elapsedRealtimeNanos() - start) / 1_000_000
-                        if (tookMs > SLOW_FRAME_MS) Log.w(TAG, "slow frame ${tookMs}ms")
-                        delay((FRAME_MS - tookMs).coerceAtLeast(1))
+                    when {
+                        pattern == null -> visualizerLoop(length)
+                        pattern.animated -> patternLoop(pattern)
+                        else -> show(pattern)
                     }
                 }
             }
@@ -132,7 +128,47 @@ class GlyphWaveToyService : Service() {
         }
     }
 
-    /** Main thread only (collector runs on Dispatchers.Main). Allocation-free. */
+    /**
+     * The visualizer: shared [MatrixRenderer] (same one the app preview uses) at the configured fps.
+     * Main thread; allocation-free per frame (frame + output arrays are allocated once here).
+     */
+    private suspend fun visualizerLoop(length: Int) {
+        val manager = gmm ?: return
+        val renderer = Engine.renderer(length)
+        val audio = AudioFrame()
+        val out = IntArray(length * length)
+        var slowFrames = 0
+        Log.i(TAG, "render loop start mode=${renderer.currentMode.id} focus=${renderer.focus} fps=${Engine.fps}")
+        while (currentCoroutineContext().isActive && connected) {
+            val start = SystemClock.elapsedRealtimeNanos()
+            Engine.audioFrames.readInto(audio)
+            renderer.render(audio, MediaBridge.state.value, start / 1_000_000, out)
+            try {
+                manager.setMatrixFrame(out)
+            } catch (e: GlyphException) {
+                Log.e(TAG, "setMatrixFrame failed", e)
+                Engine.updateToyStatus { it.copy(lastError = "setMatrixFrame: ${e.message}") }
+                return
+            }
+            Engine.matrixFrame.publish(out, start / 1_000_000)
+            val tookNs = SystemClock.elapsedRealtimeNanos() - start
+            if (tookNs > SLOW_FRAME_NS && ++slowFrames % 30 == 1) {
+                Log.w(TAG, "slow frame ${tookNs / 1_000}us (${slowFrames} so far)")
+            }
+            val frameNs = 1_000_000_000L / Engine.fps
+            delay(((frameNs - tookNs) / 1_000_000).coerceAtLeast(1))
+        }
+    }
+
+    /** Animated diagnostic pattern (AUDIO_LEVEL) at 30 fps. */
+    private suspend fun patternLoop(pattern: TestPattern) {
+        while (currentCoroutineContext().isActive && connected) {
+            show(pattern, Engine.audioLevel, logFrame = false)
+            delay(33)
+        }
+    }
+
+    /** Main thread only. */
     private fun show(pattern: TestPattern, level: Float = 0f, logFrame: Boolean = true) {
         val manager = gmm ?: return
         val c = canvas ?: return
@@ -141,6 +177,7 @@ class GlyphWaveToyService : Service() {
         TestPatterns.render(pattern, c, m, level)
         try {
             manager.setMatrixFrame(c.pixels)
+            Engine.matrixFrame.publish(c.pixels, SystemClock.elapsedRealtime())
             if (logFrame) Log.i(TAG, "frame pattern=${pattern.name} max=${c.pixels.max()} lit=${c.pixels.count { it > 0 }}")
         } catch (e: GlyphException) {
             Log.e(TAG, "setMatrixFrame failed", e)
@@ -149,8 +186,16 @@ class GlyphWaveToyService : Service() {
     }
 
     private fun onLongPress() {
-        // Phase 0 behaviour; the GestureRecognizer replaces this in Phase 4.
-        Engine.testPattern.value = Engine.testPattern.value.next()
+        // Phase 3 behaviour (= the brief's default "long press → next mode"); the GestureRecognizer takes over in Phase 4.
+        val pattern = Engine.testPattern.value
+        if (pattern != null) {
+            Engine.testPattern.value = pattern.next()
+            return
+        }
+        val mode = Engine.renderer(canvas?.length ?: MatrixSpec.DEFAULT_LENGTH).nextMode()
+        Log.i(TAG, "mode → ${mode.id}")
+        val app = application as GlyphWaveApp
+        app.appScope.launch { app.settings.setVisualizerMode(mode.id) }
     }
 
     private inner class EventHandler(thread: HandlerThread) : Handler(thread.looper) {
@@ -180,8 +225,7 @@ class GlyphWaveToyService : Service() {
     }
 
     private companion object {
-        const val FRAME_MS = 33L
-        const val SLOW_FRAME_MS = 8L
+        const val SLOW_FRAME_NS = 8_000_000L
 
         val KNOWN_EVENTS = setOf(
             GlyphToy.EVENT_CHANGE,
