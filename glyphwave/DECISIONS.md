@@ -304,3 +304,11 @@ with bass at the bottom only; the treble was random per-LED sparkle that read as
   one slow rotation every 24 s. v1's 24 hard wedges and the intermediate spiky-star version were rejected on the PNG previews.
 - **Bass · Treble v2:** anti-aliased bass disc, a **shockwave ring per beat**, and **12 treble dots orbiting** at r≈10.2. Each
   dot follows one slice of 4–16 kHz (mirrored), grows and brightens with it, and the orbit speeds up with treble energy.
+
+### D-030 · Bars v3 and Pulse v2 get the Radial treatment (owner: "radial and treble look amazing, do the same to bars and pulse")
+- **Bars v3:** a smoothed spectral profile (9 neighbour-blended points per half, cosine-interpolated across the 13 columns)
+  so bars flow into each other. **Anti-aliased tops** (the top LED gets the fractional height), a faint glow above each bar,
+  and sub-pixel peak dots at 50 %. Still mirrored, bass in the centre.
+- **Pulse v2:** all rings are coverage-based (anti-aliased), and the fill fades into the main ring. The main ring breathes with
+  gentle 4-fold mirrored spectral lobes (±2.4 cells), rotating every 30 s. Mids ring, beat shockwaves and rim flash are kept.
+Design rule from now on, for every mode: **anti-aliased geometry, a smoothed and interpolated spectrum, mirrored structure.**

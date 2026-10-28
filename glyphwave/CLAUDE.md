@@ -86,6 +86,9 @@ B) MediaProjection + `AudioPlaybackCaptureConfiguration` → AudioRecord 48 kHz 
 `interface MatrixMode { val id; val name; fun render(audio, media, tMs, out: IntArray) }`
 Radial spectrum, Classic bars, Pulse, Album art, Oscilloscope, Particles, Now playing (own 5x7 font,
 never SDK setText). Idle: breathing dot / rotating arc at very low brightness.
+**Visual design rule (owner-approved, D-029/D-030):** every mode uses anti-aliased geometry
+(`MatrixCanvas.dot/splat`, coverage-based rings and edges), a smoothed + interpolated spectrum, and a
+mirrored/balanced structure. Hard on/off edges and random per-LED noise look bad on 25×25.
 
 ## Gestures
 Recognizer is pure Kotlin, unit-tested, all timings configurable, built on the OBSERVED event sequence

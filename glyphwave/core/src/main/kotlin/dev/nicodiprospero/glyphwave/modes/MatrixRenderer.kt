@@ -20,7 +20,7 @@ class MatrixRenderer(val length: Int) {
 
     private val radial = RadialSpectrumMode(polar)
     private val bars = ClassicBarsMode(mask)
-    val modes: List<MatrixMode> = listOf(radial, bars, PulseMode(polar, mask), BassTrebleMode(polar))
+    val modes: List<MatrixMode> = listOf(radial, bars, PulseMode(polar), BassTrebleMode(polar))
     private val idle = IdleMode(polar)
 
     @Volatile var modeIndex = 0
