@@ -105,8 +105,8 @@ class AudioEngineService : Service() {
         scope.launch {
             src.errors.collect { msg ->
                 Log.e(TAG, "AUDIO source error: $msg")
-                Engine.publishAudio(Engine.audio.value.copy(error = msg))
-                if (id == SourceId.PLAYBACK_CAPTURE) withContext(Dispatchers.Main) { stopSelf() }
+                // Fatal for any source: stop the engine so the UI never shows RUNNING without audio.
+                withContext(Dispatchers.Main) { fail(msg) }
             }
         }
         try {

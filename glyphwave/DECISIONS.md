@@ -312,3 +312,12 @@ with bass at the bottom only; the treble was random per-LED sparkle that read as
 - **Pulse v2:** all rings are coverage-based (anti-aliased), and the fill fades into the main ring. The main ring breathes with
   gentle 4-fold mirrored spectral lobes (±2.4 cells), rotating every 30 s. Mids ring, beat shockwaves and rim flash are kept.
 Design rule from now on, for every mode: **anti-aliased geometry, a smoothed and interpolated spectrum, mirrored structure.**
+
+### D-031 · Visualizer error -3 ("Cannot initialize Visualizer engine")
+Seen on device after reinstalls and restarts, while the UI still said RUNNING. Error -3 (NO_INIT) means a session-0 Visualizer is
+still held: either ours, from an asynchronous release racing the next start, or another app's (likely suspect on Nothing
+OS: Glyph Interface › Music visualization). Fixes:
+- `stop()` releases **synchronously** (waits ≤ 1 s).
+- Creation **retries 5× with backoff** (400, 800, 1200, 1600 ms), each attempt logged.
+- After that, the error is **fatal for the engine**: the service stops, the UI shows STOPPED plus a hint (turn off the other
+  visualizer, or use source B). A RUNNING status without audio can no longer happen.

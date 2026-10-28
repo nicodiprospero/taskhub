@@ -28,6 +28,8 @@ class VisualizerSource : AudioSource {
     private companion object {
         const val POLL_HZ = 60
         const val POLL_MS = 1000L / POLL_HZ
+        const val MAX_ATTEMPTS = 5
+        const val RETRY_MS = 400L
     }
 
     override val id = SourceId.VISUALIZER
@@ -52,33 +54,50 @@ class VisualizerSource : AudioSource {
         // Visualizer delivers callbacks on the looper of the thread that created it.
         val h = Handler(t.looper)
         handler = h
-        h.post {
-            try {
-                val v = Visualizer(0)
-                val size = Visualizer.getCaptureSizeRange()[1]
-                v.captureSize = size
-                v.scalingMode = Visualizer.SCALING_MODE_AS_PLAYED
-                sampleRate = v.samplingRate / 1000 // mHz → Hz
-                pool = RawAudioPool(8, size)
+        h.post { attempt(1) }
+    }
+
+    /**
+     * Creates the Visualizer, retrying with backoff: error -3 (NO_INIT) happens when a previous session-0
+     * Visualizer (ours from a quick restart, or another app's) still holds the effect.
+     */
+    private fun attempt(n: Int) {
+        if (thread == null) return // stopped while waiting
+        try {
+            val v = Visualizer(0)
+            val size = Visualizer.getCaptureSizeRange()[1]
+            v.captureSize = size
+            v.scalingMode = Visualizer.SCALING_MODE_AS_PLAYED
+            sampleRate = v.samplingRate / 1000 // mHz → Hz
+            pool = RawAudioPool(8, size)
+            v.enabled = true
+            visualizer = v
+            val buf = ByteArray(size)
+            waveform = buf
+            if (v.getWaveForm(buf) == Visualizer.SUCCESS) {
+                polling = true
+                handler?.post(poll)
+                Log.i(TAG, "AUDIO visualizer started (polling ${POLL_HZ}Hz) size=$size sampleRate=$sampleRate attempt=$n")
+            } else {
+                v.enabled = false
+                val rate = Visualizer.getMaxCaptureRate()
+                v.setDataCaptureListener(listener, rate, true, false)
                 v.enabled = true
-                visualizer = v
-                val buf = ByteArray(size)
-                waveform = buf
-                if (v.getWaveForm(buf) == Visualizer.SUCCESS) {
-                    polling = true
-                    h.post(poll)
-                    Log.i(TAG, "AUDIO visualizer started (polling ${POLL_HZ}Hz) size=$size sampleRate=$sampleRate")
-                } else {
-                    v.enabled = false
-                    val rate = Visualizer.getMaxCaptureRate()
-                    v.setDataCaptureListener(listener, rate, true, false)
-                    v.enabled = true
-                    Log.i(TAG, "AUDIO visualizer started (listener ${rate / 1000.0}Hz) size=$size sampleRate=$sampleRate")
-                }
-            } catch (e: Exception) {
-                // Typically RuntimeException "Cannot initialize Visualizer engine" or UnsupportedOperation.
-                Log.e(TAG, "AUDIO visualizer failed", e)
-                _errors.tryEmit("Visualizer: ${e.message ?: e.javaClass.simpleName}")
+                Log.i(TAG, "AUDIO visualizer started (listener ${rate / 1000.0}Hz) size=$size sampleRate=$sampleRate attempt=$n")
+            }
+        } catch (e: Exception) {
+            // Typically RuntimeException "Cannot initialize Visualizer engine, error: -3".
+            visualizer?.let { runCatching { it.release() } }
+            visualizer = null
+            if (n < MAX_ATTEMPTS) {
+                Log.w(TAG, "AUDIO visualizer attempt $n failed (${e.message}); retrying in ${RETRY_MS * n} ms")
+                handler?.postDelayed({ attempt(n + 1) }, RETRY_MS * n)
+            } else {
+                Log.e(TAG, "AUDIO visualizer failed after $n attempts", e)
+                _errors.tryEmit(
+                    "Visualizer unavailable (${e.message}). Another app may be using the global audio " +
+                        "visualizer — e.g. Glyph Interface › Music visualization. Turn it off, or use source B.",
+                )
             }
         }
     }
@@ -117,13 +136,15 @@ class VisualizerSource : AudioSource {
         _frames.tryEmit(block)
     }
 
+    /** Releases synchronously (waits ≤ 1 s) so an immediate restart doesn't hit error -3. */
     override fun stop() {
         val t = thread ?: return
         thread = null
         polling = false
         val h = handler ?: Handler(t.looper)
         handler = null
-        h.removeCallbacks(poll)
+        h.removeCallbacksAndMessages(null)
+        val released = java.util.concurrent.CountDownLatch(1)
         h.post {
             visualizer?.let {
                 runCatching { it.enabled = false }
@@ -131,7 +152,11 @@ class VisualizerSource : AudioSource {
             }
             visualizer = null
             Log.i(TAG, "AUDIO visualizer released")
+            released.countDown()
             t.quitSafely()
+        }
+        if (Thread.currentThread() !== t && !released.await(1, java.util.concurrent.TimeUnit.SECONDS)) {
+            Log.w(TAG, "AUDIO visualizer release timed out")
         }
     }
 }
