@@ -23,6 +23,7 @@ import dev.nicodiprospero.glyphwave.engine.AudioFrame
 import dev.nicodiprospero.glyphwave.media.MediaBridge
 import dev.nicodiprospero.glyphwave.debug.GlyphEvent
 import dev.nicodiprospero.glyphwave.engine.Engine
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -31,7 +32,9 @@ import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.android.asCoroutineDispatcher
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * The GlyphWave Glyph Toy.
@@ -45,6 +48,8 @@ class GlyphWaveToyService : Service() {
     // Glyph events are handled on a dedicated high-priority thread, not the main looper, so the
     // timestamps we log are not skewed by UI work in the companion app (same process).
     private lateinit var eventThread: HandlerThread
+    private lateinit var renderThread: HandlerThread
+    private lateinit var renderDispatcher: CoroutineDispatcher
     private lateinit var messenger: Messenger
 
     private var gmm: GlyphMatrixManager? = null
@@ -58,6 +63,8 @@ class GlyphWaveToyService : Service() {
         super.onCreate()
         eventThread = HandlerThread("GlyphWave-events", Process.THREAD_PRIORITY_URGENT_DISPLAY).apply { start() }
         messenger = Messenger(EventHandler(eventThread))
+        renderThread = HandlerThread("GlyphWave-render", Process.THREAD_PRIORITY_DISPLAY).apply { start() }
+        renderDispatcher = Handler(renderThread.looper).asCoroutineDispatcher("GlyphWave-render")
         lifecycle("service onCreate")
     }
 
@@ -79,6 +86,7 @@ class GlyphWaveToyService : Service() {
         lifecycle("service onDestroy")
         shutdown()
         eventThread.quitSafely()
+        renderThread.quitSafely()
         super.onDestroy()
     }
 
@@ -129,34 +137,70 @@ class GlyphWaveToyService : Service() {
     }
 
     /**
-     * The visualizer: shared [MatrixRenderer] (same one the app preview uses) at the configured fps.
-     * Main thread; allocation-free per frame (frame + output arrays are allocated once here).
+     * The visualizer: shared [MatrixRenderer] (same one the app preview uses) at the configured fps, on a
+     * dedicated display-priority thread so app UI work can't stall it. Allocation-free per frame. Timing of
+     * the two halves (render vs setMatrixFrame IPC) is summarised in logcat every 5 s.
      */
-    private suspend fun visualizerLoop(length: Int) {
-        val manager = gmm ?: return
+    private suspend fun visualizerLoop(length: Int) = withContext(renderDispatcher) {
+        val manager = gmm ?: return@withContext
         val renderer = Engine.renderer(length)
         val audio = AudioFrame()
         val out = IntArray(length * length)
-        var slowFrames = 0
-        Log.i(TAG, "render loop start mode=${renderer.currentMode.id} focus=${renderer.focus} fps=${Engine.fps}")
+        val stats = FrameStats()
+        Log.i(TAG, "render loop start mode=${renderer.currentMode.id} focus=${renderer.focus} fps=${Engine.fps} thread=${Thread.currentThread().name}")
+        var next = SystemClock.elapsedRealtimeNanos()
         while (currentCoroutineContext().isActive && connected) {
             val start = SystemClock.elapsedRealtimeNanos()
             Engine.audioFrames.readInto(audio)
             renderer.render(audio, MediaBridge.state.value, start / 1_000_000, out)
+            val rendered = SystemClock.elapsedRealtimeNanos()
             try {
                 manager.setMatrixFrame(out)
             } catch (e: GlyphException) {
                 Log.e(TAG, "setMatrixFrame failed", e)
                 Engine.updateToyStatus { it.copy(lastError = "setMatrixFrame: ${e.message}") }
-                return
+                return@withContext
             }
+            val pushed = SystemClock.elapsedRealtimeNanos()
             Engine.matrixFrame.publish(out, start / 1_000_000)
-            val tookNs = SystemClock.elapsedRealtimeNanos() - start
-            if (tookNs > SLOW_FRAME_NS && ++slowFrames % 30 == 1) {
-                Log.w(TAG, "slow frame ${tookNs / 1_000}us (${slowFrames} so far)")
-            }
+            stats.add(rendered - start, pushed - rendered, start)
+
+            // Fixed-rate schedule (no drift); if we fell behind by > 1 frame, resync instead of bursting.
             val frameNs = 1_000_000_000L / Engine.fps
-            delay(((frameNs - tookNs) / 1_000_000).coerceAtLeast(1))
+            next += frameNs
+            val now = SystemClock.elapsedRealtimeNanos()
+            if (next < now - frameNs) next = now
+            delay(((next - now) / 1_000_000).coerceAtLeast(1))
+        }
+    }
+
+    /** Aggregated frame timing, logged every 5 s (replaces per-frame "slow frame" spam). */
+    private class FrameStats {
+        private var frames = 0
+        private var renderNs = 0L
+        private var pushNs = 0L
+        private var maxNs = 0L
+        private var over = 0
+        private var since = 0L
+
+        fun add(render: Long, push: Long, now: Long) {
+            if (since == 0L) since = now
+            frames++
+            renderNs += render
+            pushNs += push
+            val total = render + push
+            if (total > maxNs) maxNs = total
+            if (total > SLOW_FRAME_NS) over++
+            if (now - since >= 5_000_000_000L) {
+                val secs = (now - since) / 1e9
+                Log.i(
+                    TAG,
+                    "RENDER %.1f fps · render avg %d us · push avg %d us · max %d us · >8ms %d/%d".format(
+                        frames / secs, renderNs / frames / 1_000, pushNs / frames / 1_000, maxNs / 1_000, over, frames,
+                    ),
+                )
+                frames = 0; renderNs = 0; pushNs = 0; maxNs = 0; over = 0; since = now
+            }
         }
     }
 

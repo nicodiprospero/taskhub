@@ -20,7 +20,12 @@ class SpectrumProcessor(
     var dynamicRangeDb: Float = 42f,
     var peakDecayDbPerSecond: Float = 6f,
     var attackMs: Float = 15f,
-    var releaseMs: Float = 180f,
+    var releaseMs: Float = 120f,
+    /**
+     * Spectral tilt compensation in dB per octave around 1 kHz. Music falls off ~3–6 dB/oct, so without it
+     * the highs always look weaker than the bass (owner: bars "only on one side" with hip-hop).
+     */
+    var tiltDbPerOctave: Float = 3f,
     var peakHoldMs: Float = 300f,
     /** Peak-dot gravity in "full heights per second²". */
     var gravity: Float = 3f,
@@ -37,6 +42,7 @@ class SpectrumProcessor(
     private val loBin = IntArray(bandCount)
     private val hiBin = IntArray(bandCount)
     private val centreBin = FloatArray(bandCount)
+    private val tiltDb = FloatArray(bandCount)
     private val peakHold = FloatArray(bandCount)
     private val peakVelocity = FloatArray(bandCount)
     private var configuredFor = -1L
@@ -57,6 +63,7 @@ class SpectrumProcessor(
             loBin[i] = (lo / binHz).toInt().coerceIn(1, maxBin)
             hiBin[i] = (hi / binHz).toInt().coerceIn(1, maxBin)
             centreBin[i] = (centreFrequency(i) / binHz).coerceIn(1f, maxBin.toFloat())
+            tiltDb[i] = tiltDbPerOctave * (ln(centreFrequency(i) / 1_000f) / ln(2f))
         }
     }
 
@@ -75,7 +82,7 @@ class SpectrumProcessor(
                 val f = c - b0
                 mags[b0] * (1 - f) + mags[b0 + 1] * f
             }
-            val db = 20f * log10(v + 1e-7f)
+            val db = 20f * log10(v + 1e-7f) + tiltDb[i]
             raw[i] = db
             if (db > frameMaxDb) frameMaxDb = db
         }

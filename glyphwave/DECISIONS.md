@@ -281,3 +281,14 @@ default 80 %) → drive values. Gamma, brightness and fps (30/60) are settings.
 preview mirrors it. When the toy isn't active, the app drives the same renderer itself, so modes can be tuned with the
 phone face up. `:core:renderPreviews` uses the same `MatrixRenderer` on synthetic audio, so the PNGs match the device.
 The render path is allocation-free (frames, LUT and BandViews are preallocated). Slow frames > 8 ms and slow analysis > 4 ms are logged.
+
+### D-028 · Phase 3.1: sync and balance fixes from on-device feedback (2026-10-28)
+Owner, on Phase 3 with hip-hop: *"designs look nice but only partially in sync; bars look like they're only on one side."*
+What the logs showed and what changed:
+
+| Symptom / evidence | Cause | Fix |
+|---|---|---|
+| `AUDIO stats rate=19.4/s` | The Visualizer listener caps at ~20 Hz, and each 1024-sample snapshot covers 21 ms of every 50 ms, so kicks between snapshots are weak or missed and every hit is up to 50 ms late | **Poll `getWaveForm()` at 60 Hz** on the visualizer thread: overlapping windows of the most recent audio, 3× the update rate. The listener is kept as a fallback |
+| Partial beat sync on hip-hop | "Energy > 1.4 × 1 s average": sustained 808s raise the average, so kicks stop standing out | **Bass spectral flux** (rise in log magnitude over 30–150 Hz bins) with an **adaptive threshold** (mean + 1.5·std over 1 s), a 180 ms refractory period, and the bass-dominance gate kept. New tests: overlapping 60 Hz polling, and sustained 808 notes (one beat per note) |
+| `slow frame 12–16 ms` on every frame, on the **main thread** | Render + `setMatrixFrame` IPC on the UI thread, competing with Compose | Render loop on its own `GlyphWave-render` HandlerThread (display priority), fixed-rate drift-free scheduling. Render and push timings are logged separately (`RENDER … fps · render avg · push avg`) every 5 s |
+| Bars "only on one side" | Bass on the left, where columns are short on a round matrix. Music's natural high-frequency roll-off makes the right side look dead | Bars **mirrored**: bass in the centre (tallest) columns, highs toward both edges. **Spectral tilt compensation of +3 dB/octave** around 1 kHz for every mode. Band release 180 → 120 ms for snappier motion |

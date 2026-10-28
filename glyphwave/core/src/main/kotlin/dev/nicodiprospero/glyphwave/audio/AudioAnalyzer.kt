@@ -2,6 +2,7 @@ package dev.nicodiprospero.glyphwave.audio
 
 import dev.nicodiprospero.glyphwave.engine.AudioFrame
 import kotlin.math.exp
+import kotlin.math.ln
 import kotlin.math.max
 import kotlin.math.sqrt
 
@@ -20,6 +21,8 @@ class AudioAnalyzer(val fftSize: Int = 1024, bandCount: Int = AudioFrame.BANDS) 
     private var ringPos = 0
     private val linear = FloatArray(fftSize)
     private val mags = FloatArray(fft.binCount)
+    /** Log magnitude of the low bins from the previous frame (bass flux). 16 bins cover 150 Hz at any rate ≤ 100 kHz. */
+    private val prevBass = FloatArray(16) { ln(FLUX_FLOOR) }
     private var lastNanos = Long.MIN_VALUE
     private var sequence = 0L
 
@@ -50,11 +53,11 @@ class AudioAnalyzer(val fftSize: Int = 1024, bandCount: Int = AudioFrame.BANDS) 
         val midE = rangeEnergy(150f, 2_000f, binHz)
         val highE = rangeEnergy(4_000f, 16_000f, binHz)
 
-        // 4) beat on bass energy — gated on bass DOMINANCE so broadband hats/cymbals (which leak a little
-        //    energy into the bass bins) can't fire it.
+        // 4) beat = onset of the bass: half-wave-rectified log-magnitude flux over 30–150 Hz bins, gated
+        //    on bass DOMINANCE so broadband hats/cymbals (which leak into the bass bins) can't fire it.
         val fullE = rangeEnergy(30f, 16_000f, binHz)
         val bassShare = if (fullE > 1e-9f) bassE / fullE else 0f
-        val beat = beats.process(bassE * bassE, tNanos, gate = bassShare >= BASS_SHARE_FOR_BEAT)
+        val beat = beats.process(bassFlux(binHz), tNanos, gate = bassShare >= BASS_SHARE_FOR_BEAT)
 
         // 5) overall rms of the newest block
         var sum = 0.0
@@ -83,6 +86,20 @@ class AudioAnalyzer(val fftSize: Int = 1024, bandCount: Int = AudioFrame.BANDS) 
         out.active = true
     }
 
+    /** Σ max(0, ln m − ln m_prev) over the bass bins. Previous magnitudes kept per bin. */
+    private fun bassFlux(binHz: Float): Float {
+        val lo = max(1, (30f / binHz).toInt())
+        val hi = (150f / binHz).toInt().coerceIn(lo, prevBass.size - 1)
+        var flux = 0f
+        for (b in lo..hi) {
+            val cur = ln(mags[b] + FLUX_FLOOR)
+            val d = cur - prevBass[b]
+            if (d > 0f) flux += d
+            prevBass[b] = cur
+        }
+        return flux
+    }
+
     private fun rangeEnergy(fLo: Float, fHi: Float, binHz: Float): Float {
         val lo = max(1, (fLo / binHz).toInt())
         val hi = (fHi / binHz).toInt().coerceAtMost(mags.size - 1)
@@ -95,10 +112,14 @@ class AudioAnalyzer(val fftSize: Int = 1024, bandCount: Int = AudioFrame.BANDS) 
     private companion object {
         /** Kick/808: bass ≫ rest. Noise-like hats: bass ≈ 5–10 % of the amplitude. */
         const val BASS_SHARE_FOR_BEAT = 0.35f
+
+        /** Below this magnitude a bin counts as silent for the flux (8-bit Visualizer LSB ≈ 0.004). */
+        const val FLUX_FLOOR = 0.003f
     }
 
     fun reset() {
         ring.fill(0f); ringPos = 0; lastNanos = Long.MIN_VALUE
+        prevBass.fill(ln(FLUX_FLOOR))
         spectrum.reset(); beats.reset()
         bassRange.reset(); midRange.reset(); highRange.reset(); levelRange.reset()
     }

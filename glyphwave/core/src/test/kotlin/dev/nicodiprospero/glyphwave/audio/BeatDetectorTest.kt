@@ -50,4 +50,48 @@ class BeatDetectorTest {
     fun `steady bass tone is not a beat`() {
         assertTrue(beats(seconds = 6, blockSize = 800, kick = false, hats = false, toneHz = 60f).size <= 1)
     }
+
+    /** Visualizer polled at 60 Hz: overlapping 1024-sample windows every 800 samples. */
+    @Test
+    fun `120 bpm kick with overlapping 60 Hz Visualizer polling`() {
+        val a = AudioAnalyzer()
+        val frame = AudioFrame()
+        val window = FloatArray(1024)
+        val beats = mutableListOf<Long>()
+        val hops = 10 * Synth.RATE / 800
+        for (k in 1..hops) {
+            val end = k.toLong() * 800
+            Synth.track(end - 1024, window)
+            val t = end * 1_000_000_000L / Synth.RATE
+            a.process(window, 1024, Synth.RATE, t, frame)
+            if (frame.beat) beats += t / 1_000_000
+        }
+        assertTrue("beats=${beats.size}", beats.size in 17..20)
+        assertTrue(beats.zipWithNext { x, y -> y - x }.all { it in 450..550 })
+    }
+
+    /** Hip-hop: an 808 that sustains for the whole beat, with a new note on every beat. */
+    @Test
+    fun `sustained 808 notes still give one beat per note`() {
+        val a = AudioAnalyzer()
+        val frame = AudioFrame()
+        val block = FloatArray(800)
+        val beats = mutableListOf<Long>()
+        val beatLen = Synth.RATE / 2 // 120 bpm
+        val notes = floatArrayOf(45f, 45f, 52f, 41f)
+        for (k in 0 until 10 * Synth.RATE / 800) {
+            for (i in 0 until 800) {
+                val n = k.toLong() * 800 + i
+                val note = notes[((n / beatLen) % notes.size).toInt()]
+                val since = (n % beatLen).toFloat() / Synth.RATE
+                // fast attack, slow decay: still ~60 % at the next note
+                val env = (since / 0.005f).coerceAtMost(1f) * kotlin.math.exp(-since * 1f)
+                block[i] = 0.7f * env * kotlin.math.sin(2 * Math.PI * note * n / Synth.RATE).toFloat()
+            }
+            val t = (k + 1L) * 800 * 1_000_000_000L / Synth.RATE
+            a.process(block, 800, Synth.RATE, t, frame)
+            if (frame.beat) beats += t / 1_000_000
+        }
+        assertTrue("beats=${beats.size} $beats", beats.size in 16..20)
+    }
 }

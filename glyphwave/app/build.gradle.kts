@@ -22,8 +22,8 @@ android {
         applicationId = "dev.nicodiprospero.glyphwave"
         minSdk = 34
         targetSdk = 37
-        versionCode = 4
-        versionName = "0.3.0-phase3"
+        versionCode = 5
+        versionName = "0.3.1-phase3"
     }
 
     buildTypes {
