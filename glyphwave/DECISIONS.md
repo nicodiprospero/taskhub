@@ -40,7 +40,7 @@ The package layout from the brief stays the same. Android-free files live in
 `core/src/main/kotlin/dev/nicodiprospero/glyphwave/…`, and Android ones in `app/src/main/java/…`, with the same packages.
 `-Pglyphwave.coreOnly=true` drops `:app` from the build, and the Android plugin is only declared in `:app`.
 
-### D-004 · Pixel value range of `setMatrixFrame(IntArray)` — **0..4095 (pending on-device confirmation)**
+### D-004 · Pixel value range of `setMatrixFrame(IntArray)` — **0..4095 (confirmed on device)**
 Evidence:
 - `GlyphMatrixManager.setMatrixFrame(int[])` passes the array straight to `IGlyphService.setMatrixColors`
   with no scaling (bytecode of glyph-matrix-sdk-2.0.aar).
@@ -51,7 +51,15 @@ Evidence:
 
 Decision: `MatrixSpec.MAX_VALUE = 4095`. Modes always draw normalised 0..1 floats through `MatrixCanvas`, so the
 range is a single constant if the phone proves otherwise.
-**Confirmation test:** the toy's `VALUE_RANGE` pattern (see the Phase 0 checklist). Result: _TBD by owner_.
+**Confirmation (2026-10-28, owner's Phone (3)):**
+- `VALUE_RANGE`: the ramp brightens across the full width, and the 255 half is clearly dimmer than the 4095 half.
+- `LOW_END`: all 8 bands (0, 8, 32, 128, 512, 1024, 2048, 4095) can be told apart. With a 255 cap, the top four
+  bands would look identical. The two brightest (2048 vs 4095) are the hardest to separate, so perceived
+  brightness compresses at the top: gamma correction (Phase 3) is needed. Value 8 is still visible, which sets
+  the floor for the idle animation.
+- `RIM`: a clean closed ring, which confirms D-005 on hardware.
+- `ORIENTATION`: the arrow points up and the marker is on the left, so (0,0) is the **top-left as seen from the back**
+  with the phone upright. No flipping needed.
 
 ### D-005 · Circle mask = `(2dx)² + (2dy)² ≤ n²`
 The LED allocation SVG in the kit was parsed cell by cell. Phone (3) has 489 LEDs with row widths
@@ -151,3 +159,30 @@ Answers:
 - `action_down` without `change` followed by unbind = system short press. The recognizer resets and emits nothing.
 - Every timeout runs from an injected clock/scheduler, so the recognizer stays pure Kotlin and unit-testable with
   the exact timelines above.
+
+---
+
+## Phase 1 — MediaBridge
+
+### D-016 · `MediaState` lives in `:core`, with album art as a luminance grid
+Modes need title, artist, playback state, position and art, but `:core` can't see `Bitmap`. So `MediaBridge`
+converts the art once per track, off the main thread: centre crop → 64×64 → luma 0..255 (`ArtPixels`). The
+full bitmap is kept separately (`MediaBridge.artBitmap`) for the companion UI only. `positionAt(now)`
+extrapolates the position from `PlaybackState` (position + elapsed × speed), so the UI and Now-playing never poll.
+
+### D-017 · The notification listener only exists for the permission
+`getActiveSessions()` requires an enabled `NotificationListenerService`. `MediaListenerService` ignores
+notifications. A useful side effect: while access is granted, the system keeps it bound, so the process (and
+`MediaBridge`) stays alive for the toy even when the app UI is closed.
+Sideloading note: Android 13+ "restricted settings" block notification access for apps installed from
+a browser or file manager (fix: App info → ⋮ → *Allow restricted settings*). `adb install` is not affected.
+
+### D-018 · Session selection policy (setting, default YT Music only)
+- `YT_MUSIC_ONLY`: track `com.google.android.apps.youtube.music` only. If YT Music isn't installed, report
+  `YT_MUSIC_NOT_INSTALLED`, distinct from `NO_SESSION` (installed but not running / nothing played yet).
+- `ANY_MEDIA_APP`: YT Music if it's playing → any playing session → YT Music → first session.
+Persisted with DataStore (`SettingsRepository`, the first setting), and applied live.
+
+### D-019 · YT Music custom actions (for "like song")
+Logged on every change as `MEDIA customActions=[name [action], …]`, and listed as buttons in the debug screen.
+Result on the owner's phone: _TBD (Phase 1 check)_.

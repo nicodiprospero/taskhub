@@ -8,6 +8,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.os.SystemClock
+import android.provider.Settings
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -16,6 +17,8 @@ import androidx.activity.enableEdgeToEdge
 import dev.nicodiprospero.glyphwave.TAG
 import dev.nicodiprospero.glyphwave.debug.GlyphEvent
 import dev.nicodiprospero.glyphwave.engine.Engine
+import dev.nicodiprospero.glyphwave.media.MediaBridge
+import dev.nicodiprospero.glyphwave.media.MediaListenerService
 
 class MainActivity : ComponentActivity() {
 
@@ -24,8 +27,9 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             GlyphWaveTheme {
-                Phase0Screen(
+                DebugScreen(
                     onOpenToysManager = ::openGlyphToysManager,
+                    onGrantNotificationAccess = ::openNotificationAccess,
                     onCopy = ::copyToClipboard,
                     onMark = { label ->
                         val e = Engine.glyphEvents.record(
@@ -35,6 +39,24 @@ class MainActivity : ComponentActivity() {
                     },
                 )
             }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Picks up a freshly granted / revoked notification access when returning from Settings.
+        MediaBridge.refresh()
+    }
+
+    private fun openNotificationAccess() {
+        val component = ComponentName(this, MediaListenerService::class.java)
+        val detail = Intent(Settings.ACTION_NOTIFICATION_LISTENER_DETAIL_SETTINGS)
+            .putExtra(Settings.EXTRA_NOTIFICATION_LISTENER_COMPONENT_NAME, component.flattenToString())
+        try {
+            startActivity(detail)
+        } catch (e: ActivityNotFoundException) {
+            Log.w(TAG, "listener detail settings not found, falling back", e)
+            startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
         }
     }
 

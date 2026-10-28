@@ -22,8 +22,8 @@ android {
         applicationId = "dev.nicodiprospero.glyphwave"
         minSdk = 34
         targetSdk = 37
-        versionCode = 1
-        versionName = "0.0.1-phase0"
+        versionCode = 2
+        versionName = "0.1.0-phase1"
     }
 
     buildTypes {
@@ -55,6 +55,7 @@ dependencies {
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.androidx.datastore.preferences)
 
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)

@@ -42,11 +42,12 @@ import dev.nicodiprospero.glyphwave.glyph.MatrixSpec
 import dev.nicodiprospero.glyphwave.glyph.TestPattern
 import dev.nicodiprospero.glyphwave.glyph.TestPatterns
 
-/** Phase 0 companion screen: toy status, test pattern preview + picker, raw Glyph event log. */
+/** Diagnostics screen: media session, toy status, test pattern preview + picker, raw Glyph event log. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun Phase0Screen(
+fun DebugScreen(
     onOpenToysManager: () -> Unit,
+    onGrantNotificationAccess: () -> Unit,
     onCopy: (label: String, text: String) -> Unit,
     onMark: (String) -> Unit,
 ) {
@@ -72,8 +73,10 @@ fun Phase0Screen(
         item {
             Spacer(Modifier.height(8.dp))
             Text("GLYPHWAVE", style = GwType.Heading)
-            Text("PHASE 0 · DIAGNOSTICS", style = GwType.Label)
+            Text("PHASE 1 · DIAGNOSTICS", style = GwType.Label)
         }
+
+        item { MediaSection(onGrantNotificationAccess = onGrantNotificationAccess) }
 
         item {
             Section("TOY") {
@@ -144,7 +147,7 @@ fun Phase0Screen(
 }
 
 @Composable
-private fun Section(title: String, content: @Composable ColumnScope.() -> Unit) {
+internal fun Section(title: String, content: @Composable ColumnScope.() -> Unit) {
     Column(
         Modifier
             .fillMaxWidth()
@@ -158,7 +161,7 @@ private fun Section(title: String, content: @Composable ColumnScope.() -> Unit) 
 }
 
 @Composable
-private fun StatusRow(label: String, value: String, ok: Boolean) {
+internal fun StatusRow(label: String, value: String, ok: Boolean) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Box(
             Modifier
@@ -172,7 +175,7 @@ private fun StatusRow(label: String, value: String, ok: Boolean) {
 }
 
 @Composable
-private fun Chip(text: String, selected: Boolean, onClick: () -> Unit) {
+internal fun Chip(text: String, selected: Boolean, onClick: () -> Unit) {
     OutlinedButton(
         onClick = onClick,
         shape = RoundedCornerShape(50),
@@ -184,7 +187,7 @@ private fun Chip(text: String, selected: Boolean, onClick: () -> Unit) {
 }
 
 @Composable
-private fun GwOutlined(text: String, onClick: () -> Unit) {
+internal fun GwOutlined(text: String, onClick: () -> Unit) {
     OutlinedButton(
         onClick = onClick,
         shape = RoundedCornerShape(50),

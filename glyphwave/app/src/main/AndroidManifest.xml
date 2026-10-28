@@ -8,9 +8,12 @@
     <!-- Glyph Toys manager lives in com.nothing.thirdparty (Android 11+ package visibility) -->
     <queries>
         <package android:name="com.nothing.thirdparty" />
+        <!-- To tell "YouTube Music not installed" apart from "not running" -->
+        <package android:name="com.google.android.apps.youtube.music" />
     </queries>
 
     <application
+        android:name=".GlyphWaveApp"
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher"
@@ -26,6 +29,17 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Only used to obtain "notification access", required by MediaSessionManager.getActiveSessions(). -->
+        <service
+            android:name=".media.MediaListenerService"
+            android:exported="true"
+            android:label="@string/media_listener_label"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
 
         <!-- The Glyph Toy. Bound by the system when the toy is selected on the Glyph Matrix. -->
         <service
