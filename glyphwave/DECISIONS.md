@@ -292,3 +292,15 @@ What the logs showed and what changed:
 | Partial beat sync on hip-hop | "Energy > 1.4 × 1 s average": sustained 808s raise the average, so kicks stop standing out | **Bass spectral flux** (rise in log magnitude over 30–150 Hz bins) with an **adaptive threshold** (mean + 1.5·std over 1 s), a 180 ms refractory period, and the bass-dominance gate kept. New tests: overlapping 60 Hz polling, and sustained 808 notes (one beat per note) |
 | `slow frame 12–16 ms` on every frame, on the **main thread** | Render + `setMatrixFrame` IPC on the UI thread, competing with Compose | Render loop on its own `GlyphWave-render` HandlerThread (display priority), fixed-rate drift-free scheduling. Render and push timings are logged separately (`RENDER … fps · render avg · push avg`) every 5 s |
 | Bars "only on one side" | Bass on the left, where columns are short on a round matrix. Music's natural high-frequency roll-off makes the right side look dead | Bars **mirrored**: bass in the centre (tallest) columns, highs toward both edges. **Spectral tilt compensation of +3 dB/octave** around 1 kHz for every mode. Band release 180 → 120 ms for snappier motion |
+
+### D-029 · Radial and Bass · Treble redesigned (owner: "bars 10× better, treble and radial ugly")
+Root causes on a 25×25 matrix: hard on/off edges (jagged staircases), and no structure (Radial was lopsided
+with bass at the bottom only; the treble was random per-LED sparkle that read as noise).
+- **Anti-aliasing everywhere:** `MatrixCanvas.dot()` / `splat()` give edge LEDs partial brightness by coverage, so
+  round shapes look round and moving dots glide.
+- **Radial v2, a "breathing flower":** 4-fold mirror (bass on the vertical axis, highs on the horizontal one), 6 points
+  per quarter, smoothed with their neighbours and cosine-interpolated. The shape is a circle that breathes with the overall
+  level (0.9) plus gentle lobes from band differences (0.8). Bright anti-aliased rim, faint fill, beat-flash core,
+  one slow rotation every 24 s. v1's 24 hard wedges and the intermediate spiky-star version were rejected on the PNG previews.
+- **Bass · Treble v2:** anti-aliased bass disc, a **shockwave ring per beat**, and **12 treble dots orbiting** at r≈10.2. Each
+  dot follows one slice of 4–16 kHz (mirrored), grows and brightens with it, and the orbit speeds up with treble energy.
