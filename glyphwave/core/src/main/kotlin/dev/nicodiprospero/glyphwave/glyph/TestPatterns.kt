@@ -26,15 +26,26 @@ enum class TestPattern(val title: String, val question: String) {
         "Arrow pointing UP and a dot in the LEFT part of the top rows, as seen from the back of the phone held " +
             "upright. Tells us whether (0,0) is top-left.",
     ),
+    AUDIO_LEVEL(
+        "Audio level",
+        "Live (30 fps): a disc that grows with loudness, auto-gained. Used to judge audio-source latency and " +
+            "whether capture keeps running with the screen off. A single dim dot = no audio / engine stopped.",
+    ),
     ;
+
+    /** Patterns that change over time and need the render loop. */
+    val animated: Boolean get() = this == AUDIO_LEVEL
 
     fun next(): TestPattern = entries[(ordinal + 1) % entries.size]
 }
 
 object TestPatterns {
 
-    /** Renders [pattern] into [canvas] (cleared first) and applies [mask]. */
-    fun render(pattern: TestPattern, canvas: MatrixCanvas, mask: CircleMask) {
+    /**
+     * Renders [pattern] into [canvas] (cleared first) and applies [mask]. [level] (0..1) only drives
+     * [TestPattern.AUDIO_LEVEL]. Allocation-free.
+     */
+    fun render(pattern: TestPattern, canvas: MatrixCanvas, mask: CircleMask, level: Float = 0f) {
         require(canvas.length == mask.length)
         canvas.clear()
         val n = canvas.length
@@ -73,6 +84,17 @@ object TestPatterns {
                 canvas.setRaw(mid - 6, 4, max)
                 canvas.setRaw(mid - 7, 5, max)
                 canvas.setRaw(mid - 6, 5, max)
+            }
+            TestPattern.AUDIO_LEVEL -> {
+                val r = level.coerceIn(0f, 1f) * (n / 2f)
+                val r2 = r * r
+                for (y in 0 until n) for (x in 0 until n) {
+                    val dx = (x - mid).toFloat()
+                    val dy = (y - mid).toFloat()
+                    if (dx * dx + dy * dy <= r2) canvas.setRaw(x, y, max)
+                }
+                // Idle marker: centre LED at a low but visible level (value 32, see D-004).
+                if (r < 1f) canvas.setRaw(mid, mid, 32)
             }
         }
         mask.apply(canvas.pixels)

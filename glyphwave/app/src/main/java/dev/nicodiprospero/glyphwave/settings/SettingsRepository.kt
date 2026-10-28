@@ -3,9 +3,11 @@ package dev.nicodiprospero.glyphwave.settings
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import dev.nicodiprospero.glyphwave.audio.SourceId
 import dev.nicodiprospero.glyphwave.media.MediaBridge
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -27,7 +29,27 @@ class SettingsRepository(context: Context) {
         store.edit { it[KEY_MEDIA_SOURCE] = policy.name }
     }
 
-    private companion object {
-        val KEY_MEDIA_SOURCE = stringPreferencesKey("media_source_policy")
+    val audioSource: Flow<SourceId> = store.data.map { prefs ->
+        prefs[KEY_AUDIO_SOURCE]?.let { runCatching { SourceId.valueOf(it) }.getOrNull() } ?: DEFAULT_AUDIO_SOURCE
+    }
+
+    suspend fun setAudioSource(id: SourceId) {
+        store.edit { it[KEY_AUDIO_SOURCE] = id.name }
+    }
+
+    /** Source B only: restrict playback capture to YouTube Music's uid. */
+    val captureOnlyYtMusic: Flow<Boolean> = store.data.map { it[KEY_CAPTURE_ONLY_YT] ?: false }
+
+    suspend fun setCaptureOnlyYtMusic(value: Boolean) {
+        store.edit { it[KEY_CAPTURE_ONLY_YT] = value }
+    }
+
+    companion object {
+        /** Provisional until the Phase 2 on-device report (DECISIONS.md) picks the default. */
+        val DEFAULT_AUDIO_SOURCE = SourceId.VISUALIZER
+
+        private val KEY_MEDIA_SOURCE = stringPreferencesKey("media_source_policy")
+        private val KEY_AUDIO_SOURCE = stringPreferencesKey("audio_source")
+        private val KEY_CAPTURE_ONLY_YT = booleanPreferencesKey("capture_only_yt_music")
     }
 }

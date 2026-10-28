@@ -5,6 +5,14 @@
     <!-- Required by the Glyph Matrix SDK -->
     <uses-permission android:name="com.nothing.ketchum.permission.ENABLE" />
 
+    <!-- Audio engine (Phase 2): Visualizer + playback capture, run as a foreground service -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
     <!-- Glyph Toys manager lives in com.nothing.thirdparty (Android 11+ package visibility) -->
     <queries>
         <package android:name="com.nothing.thirdparty" />
@@ -40,6 +48,12 @@
                 <action android:name="android.service.notification.NotificationListenerService" />
             </intent-filter>
         </service>
+
+        <!-- Audio capture. Started only from the foreground (app / QS tile): RECORD_AUDIO is while-in-use. -->
+        <service
+            android:name=".audio.AudioEngineService"
+            android:exported="false"
+            android:foregroundServiceType="microphone|mediaProjection" />
 
         <!-- The Glyph Toy. Bound by the system when the toy is selected on the Glyph Matrix. -->
         <service

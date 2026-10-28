@@ -32,6 +32,18 @@ object Engine {
     /** Diagnostic pattern shown by the toy. Long press on the Glyph Button or the app changes it. */
     val testPattern = MutableStateFlow(TestPattern.VALUE_RANGE)
 
+    private val _audio = MutableStateFlow(AudioStatus())
+
+    /** Audio engine snapshot (~10 Hz) for UI and logic. */
+    val audio: StateFlow<AudioStatus> = _audio.asStateFlow()
+
+    /** Latest auto-gained level 0..1, written per audio block, read by the toy's render loop. */
+    @Volatile var audioLevel: Float = 0f
+
+    fun publishAudio(status: AudioStatus) {
+        _audio.value = status
+    }
+
     fun updateToyStatus(transform: (ToyStatus) -> ToyStatus) {
         _toyStatus.value = transform(_toyStatus.value)
     }

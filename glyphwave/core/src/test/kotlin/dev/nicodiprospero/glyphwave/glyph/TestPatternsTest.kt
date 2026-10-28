@@ -12,7 +12,7 @@ class TestPatternsTest {
     @Test
     fun `every pattern stays in range and respects the mask`() {
         for (p in TestPattern.entries) {
-            TestPatterns.render(p, canvas, mask)
+            TestPatterns.render(p, canvas, mask, level = 0.6f)
             canvas.pixels.forEachIndexed { i, v ->
                 assertTrue("$p value $v", v in 0..MatrixSpec.MAX_VALUE)
                 if (!mask.contains(i)) assertEquals("$p leaks outside mask at $i", 0, v)

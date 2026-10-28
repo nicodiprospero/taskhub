@@ -24,6 +24,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 /**
@@ -103,7 +107,22 @@ class GlyphWaveToyService : Service() {
             Engine.updateToyStatus {
                 it.copy(state = Engine.ToyState.CONNECTED, matrixLength = length, registered = registered)
             }
-            scope?.launch { Engine.testPattern.collect { show(it) } }
+            scope?.launch {
+                Engine.testPattern.collectLatest { pattern ->
+                    if (!pattern.animated) {
+                        show(pattern)
+                        return@collectLatest
+                    }
+                    // Phase 2 render loop (30 fps). Replaced by the mode renderer in Phase 3.
+                    while (currentCoroutineContext().isActive) {
+                        val start = SystemClock.elapsedRealtimeNanos()
+                        show(pattern, Engine.audioLevel, logFrame = false)
+                        val tookMs = (SystemClock.elapsedRealtimeNanos() - start) / 1_000_000
+                        if (tookMs > SLOW_FRAME_MS) Log.w(TAG, "slow frame ${tookMs}ms")
+                        delay((FRAME_MS - tookMs).coerceAtLeast(1))
+                    }
+                }
+            }
         }
 
         override fun onServiceDisconnected(name: ComponentName?) {
@@ -113,16 +132,16 @@ class GlyphWaveToyService : Service() {
         }
     }
 
-    /** Main thread only (collector runs on Dispatchers.Main). */
-    private fun show(pattern: TestPattern) {
+    /** Main thread only (collector runs on Dispatchers.Main). Allocation-free. */
+    private fun show(pattern: TestPattern, level: Float = 0f, logFrame: Boolean = true) {
         val manager = gmm ?: return
         val c = canvas ?: return
         val m = mask ?: return
         if (!connected) return
-        TestPatterns.render(pattern, c, m)
+        TestPatterns.render(pattern, c, m, level)
         try {
             manager.setMatrixFrame(c.pixels)
-            Log.i(TAG, "frame pattern=${pattern.name} max=${c.pixels.max()} lit=${c.pixels.count { it > 0 }}")
+            if (logFrame) Log.i(TAG, "frame pattern=${pattern.name} max=${c.pixels.max()} lit=${c.pixels.count { it > 0 }}")
         } catch (e: GlyphException) {
             Log.e(TAG, "setMatrixFrame failed", e)
             Engine.updateToyStatus { it.copy(lastError = "setMatrixFrame: ${e.message}") }
@@ -161,6 +180,9 @@ class GlyphWaveToyService : Service() {
     }
 
     private companion object {
+        const val FRAME_MS = 33L
+        const val SLOW_FRAME_MS = 8L
+
         val KNOWN_EVENTS = setOf(
             GlyphToy.EVENT_CHANGE,
             GlyphToy.EVENT_ACTION_DOWN,

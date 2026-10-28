@@ -73,8 +73,10 @@ fun DebugScreen(
         item {
             Spacer(Modifier.height(8.dp))
             Text("GLYPHWAVE", style = GwType.Heading)
-            Text("PHASE 1 · DIAGNOSTICS", style = GwType.Label)
+            Text("PHASE 2 · DIAGNOSTICS", style = GwType.Label)
         }
+
+        item { AudioSection() }
 
         item { MediaSection(onGrantNotificationAccess = onGrantNotificationAccess) }
 

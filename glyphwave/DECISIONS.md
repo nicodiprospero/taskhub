@@ -185,4 +185,54 @@ Persisted with DataStore (`SettingsRepository`, the first setting), and applied 
 
 ### D-019 · YT Music custom actions (for "like song")
 Logged on every change as `MEDIA customActions=[name [action], …]`, and listed as buttons in the debug screen.
-Result on the owner's phone: _TBD (Phase 1 check)_.
+Result on the owner's phone (YT Music, 2026-10-28):
+`[Like [thumbs_up_action], Shuffle off [shuffle_action], Repeat off [loop_mode_action], Dislike [thumbs_down_action]]`.
+Sending `thumbs_up_action` likes the song, and the label flips to **"Undo like"**. So the "like song" gesture
+action works, and the like *state* can be read from the action name (filled vs outline ♥ icon in Phase 4).
+
+### D-020 · Art is reconverted only on real changes
+YT Music re-parcels a new `Bitmap` instance on every metadata *and* playback update, and fills album and duration
+in a second metadata update. The first build therefore reconverted the art 3–6× per track and logged each
+superseded job as a failure. Fixes:
+- `trackKey` = MEDIA_ID, or title + artist (album excluded)
+- skip when `bitmap.sameAs(last)` for the same track
+- cancellation is rethrown, not logged
+
+---
+
+## Phase 2 — audio sources
+
+### D-021 · One analysis path for both sources
+Both sources deliver **mono float blocks** (`RawAudio`, pooled, allocation-free). For source A only the
+Visualizer *waveform* is used, not its 8-bit FFT, so Phase 3's FFT/DSP is identical for A and B and the
+sources can be swapped freely. `LevelMeter` (core, tested) measures the block rate, RMS/peak, the silence run, and
+an auto-gained level.
+- A: `Visualizer(0)`, max capture size (1024), max capture rate (≈20 Hz on stock Android), so its block rate is the
+  platform's limit, not ours.
+- B: `AudioRecord` 48 kHz stereo PCM16 → mono, 800-frame reads = **60 blocks/s**. Usages MEDIA + GAME +
+  UNKNOWN, optional `addMatchingUid(YT Music)`.
+
+### D-022 · Engine service rules
+- Foreground service type `microphone` (A) or `mediaProjection|microphone` (B). `startForeground()` runs before
+  `getMediaProjection()`. It is started only from the app (and later the QS tile), never by the toy.
+- `START_NOT_STICKY`: a restart would lack the projection consent and the while-in-use mic grant.
+- A projection stopped by the system or user → error + the service stops. Every native resource is released in `stop()`.
+- "Silent while playing": the source has been digitally silent > 2 s while the media session is PLAYING. It is logged
+  once (`AUDIO … delivers SILENCE`) and shown in red in the app.
+- The toy shows `AUDIO_LEVEL` (a disc that grows with the auto-gained level, 30 fps) while the engine runs. This is the
+  latency and screen-off probe until the real modes land in Phase 3.
+
+### D-023 · Phase 2 report — source evaluation on the owner's Phone (3)
+_To be filled from the on-device test._
+
+| | A · Visualizer (session 0) | B · Playback capture |
+|---|---|---|
+| Starts without error | TBD | TBD |
+| Signal with YT Music playing (not silent) | TBD | TBD |
+| Block rate (blocks/s) | TBD | TBD |
+| Keeps working with the screen off (matrix disc still moves) | TBD | TBD |
+| Perceived latency (disc vs beat) | TBD | TBD |
+| CPU (`top`, app process) | TBD | TBD |
+| Notes (consent dialog, single-app share, …) | TBD | TBD |
+
+**Default:** TBD (provisional default: A, because it needs no consent dialog).

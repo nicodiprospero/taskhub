@@ -16,6 +16,7 @@ import android.util.Log
 import dev.nicodiprospero.glyphwave.TAG
 import dev.nicodiprospero.glyphwave.engine.MediaState
 import dev.nicodiprospero.glyphwave.engine.YT_MUSIC_PACKAGE
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -51,6 +52,7 @@ object MediaBridge {
     private var controller: MediaController? = null
     private var artJob: Job? = null
     private var lastArtSource: Bitmap? = null
+    private var lastArtKey: String? = null
     private var lastLoggedActions: List<MediaState.CustomAction>? = null
 
     var policy: SourcePolicy = SourcePolicy.YT_MUSIC_ONLY
@@ -152,6 +154,7 @@ object MediaBridge {
             _state.value = MediaState(access = access)
             _artBitmap.value = null
             lastArtSource = null
+            lastArtKey = null
         }
     }
 
@@ -191,7 +194,8 @@ object MediaBridge {
             ?: md?.getString(MediaMetadata.METADATA_KEY_ALBUM_ARTIST)
             ?: md?.getString(MediaMetadata.METADATA_KEY_DISPLAY_SUBTITLE)
         val album = md?.getString(MediaMetadata.METADATA_KEY_ALBUM)
-        val trackKey = md?.getString(MediaMetadata.METADATA_KEY_MEDIA_ID) ?: "$title|$artist|$album"
+        // YT Music sets no MEDIA_ID and fills album/duration in a second update, so key on title+artist.
+        val trackKey = md?.getString(MediaMetadata.METADATA_KEY_MEDIA_ID) ?: "$title|$artist"
         val actions = ps?.customActions.orEmpty().map { MediaState.CustomAction(it.action, it.name.toString()) }
 
         val previous = _state.value
@@ -229,8 +233,17 @@ object MediaBridge {
         val bitmap = md?.getBitmap(MediaMetadata.METADATA_KEY_ART)
             ?: md?.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART)
             ?: md?.getBitmap(MediaMetadata.METADATA_KEY_DISPLAY_ICON)
-        if (bitmap === lastArtSource) return
+        val key = _state.value.trackKey
+        val last = lastArtSource
+        // Every metadata/playback update parcels a NEW Bitmap instance with the same pixels, so compare
+        // content (sameAs, ~1 ms for 544×544) and only reconvert on a real change.
+        // (A conversion still in flight for the same content is left to finish.)
+        if (bitmap != null && last != null && key == lastArtKey && (bitmap === last || bitmap.sameAs(last))) {
+            return
+        }
+        if (bitmap == null && last == null && key == lastArtKey) return
         lastArtSource = bitmap
+        lastArtKey = key
         _artBitmap.value = bitmap
         artJob?.cancel()
         if (bitmap == null) {
@@ -240,11 +253,15 @@ object MediaBridge {
             _state.value = _state.value.copy(art = null)
             return
         }
-        val key = _state.value.trackKey
         artJob = scope.launch {
-            val pixels = runCatching { withContext(Dispatchers.Default) { ArtConverter.toLuma(bitmap) } }
-                .onFailure { Log.w(TAG, "MEDIA art conversion failed", it) }
-                .getOrNull() ?: return@launch
+            val pixels = try {
+                withContext(Dispatchers.Default) { ArtConverter.toLuma(bitmap) }
+            } catch (e: CancellationException) {
+                throw e // superseded by a newer bitmap — not an error
+            } catch (e: Exception) {
+                Log.w(TAG, "MEDIA art conversion failed", e)
+                return@launch
+            }
             if (_state.value.trackKey == key) {
                 _state.value = _state.value.copy(art = pixels)
                 Log.i(TAG, "MEDIA art ${bitmap.width}x${bitmap.height} → ${pixels.size}x${pixels.size} luma")
