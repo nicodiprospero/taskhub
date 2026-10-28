@@ -32,6 +32,8 @@ include(":core")
 
 // `-Pglyphwave.coreOnly=true` skips the Android module so the pure-Kotlin core can be built and
 // tested on machines without the Android SDK (CI, cloud containers). See DECISIONS.md D-003.
-if (providers.gradleProperty("glyphwave.coreOnly").orNull != "true") {
+if (providers.gradleProperty("glyphwave.coreOnly").orNull == "true") {
+    rootProject.buildFileName = "core-only.gradle.kts"
+} else {
     include(":app")
 }

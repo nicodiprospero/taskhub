@@ -103,6 +103,13 @@ Not used in Phase 0. If the matrix blanks during long renders in Phase 3, test `
 The Glyph SDK EULA forbids redistribution (so the AAR is gitignored and `app/libs/README.md` explains the
 download). It also forbids commercial use without permission. GlyphWave is a free, non-commercial portfolio project.
 
+### D-013 · All Gradle plugins share the root classloader
+The first build on the PC failed with `Could not generate a decorated class for type KotlinAndroidTarget >
+com/android/build/gradle/api/BaseVariant`. The Kotlin plugin was loaded in the root classloader (for
+`:core`) and AGP only in `:app`'s. AGP 9's built-in Kotlin calls into the Kotlin plugin, which could not see
+AGP classes. The fix: declare AGP `apply false` in the root `build.gradle.kts`. The core-only mode (D-002/D-003)
+switches to `core-only.gradle.kts` as root build file (`rootProject.buildFileName`), so it never resolves AGP.
+
 ---
 
 ## Glyph Button — observed event sequence (Phase 0 instrumentation)
