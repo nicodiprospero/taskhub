@@ -117,20 +117,37 @@ asks for "latest stable". minSdk stays at 34.
 
 ---
 
-## Glyph Button — observed event sequence (Phase 0 instrumentation)
+## Glyph Button — observed event sequence (Phase 0 instrumentation, 2026-10-28)
 
-_To be filled from the owner's captures. The recognizer (Phase 4) is built on this table, not on assumptions._
+Device: Nothing Phone (3), toy bound with `longpress=1`, debug mode on. Times from `elapsedRealtimeNanos`.
+Queue lag on our event thread: 0–3 ms. Time from `change` to the new frame pushed: about 18 ms.
 
-| Gesture | Raw sequence (Δ ms) | Notes |
+| Gesture | Raw sequence (Δ from previous) | Notes |
 |---|---|---|
-| 1 long press | TBD | |
-| 2 quick long presses | TBD | |
-| 3 s hold | TBD | |
-| 6 s hold | TBD | |
+| 1 long press (×9 samples) | `action_down` → **`change` +495…504 ms** → `action_up` +199…339 ms | change fires **while held**, at a fixed ~500 ms threshold |
+| 2 long presses, fast as possible | down → change +501 → up +339 → **down +368** → change +503 → up +256 | fastest release→down gap 368 ms; fastest change→change 1210 ms |
+| 6 s hold | down → change +499 → **up +5497** (total ≈ 5.996 s) | **change is NOT repeated** during a hold; up always arrives |
+| short press (< 500 ms) | `action_down` → **`onUnbind` +210 ms**, no `action_up`, no `change` | the system switches toy on release; our service gets torn down |
 
-Questions to answer:
-1. Does `action_down` arrive before `change`?
-2. Is `change` fired at a hold threshold (how many ms after down) or on release?
-3. Does `action_up` always arrive (including after `change`, and on very long holds)?
-4. During a 6 s hold, is `change` repeated?
-5. Minimum gap between two `change` events in "2 quick long presses".
+Answers:
+1. `action_down` arrives first, always.
+2. `change` fires at a **hold threshold of ~500 ms** (system-side), not on release.
+3. `action_up` always arrives after a long press, including 6 s holds. It does **not** arrive after a short press: the toy is unbound instead.
+4. `change` is not repeated during long holds. Hold duration must be measured as down→up.
+5. The minimum practical change→change gap is about 1.2 s (500 ms hold + release + ≥ 370 ms gap + 500 ms).
+
+### D-015 · Gesture recognizer design (built on the table above)
+- **Source of truth is down/up timing.** `change` only proves the system accepted a long press (≥ ~500 ms).
+  Hold options stay enabled, because down/up exist.
+- A press is classified **on `action_up`** by its duration `d = up − down` (only if a `change` was seen):
+  `d < holdMedium (2000 ms)` → one "long press tap"; `holdMedium ≤ d < holdLong (4000 ms)` → HOLD_MEDIUM;
+  `d ≥ holdLong` → HOLD_LONG.
+- HOLD_MEDIUM / HOLD_LONG also **fire at the threshold crossing** while still held (timer from `action_down`). That
+  gives immediate feedback and the progress ring. On release the hold is not emitted twice.
+- Multi-press counting: after a long-press tap is released, wait `multiGap` (default **600 ms**, configurable)
+  for the next `action_down`. If the next press also reaches `change`, the count goes up. If the gap expires, emit LONG_PRESS /
+  DOUBLE_LONG_PRESS / TRIPLE_LONG_PRESS for the count. The brief's "2nd within ~1.2 s" is measured change→change,
+  which needs ≥ 1.2 s physically (see 5), so the window is defined on release→down instead.
+- `action_down` without `change` followed by unbind = system short press. The recognizer resets and emits nothing.
+- Every timeout runs from an injected clock/scheduler, so the recognizer stays pure Kotlin and unit-testable with
+  the exact timelines above.
