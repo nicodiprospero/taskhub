@@ -321,3 +321,22 @@ OS: Glyph Interface › Music visualization). Fixes:
 - Creation **retries 5× with backoff** (400, 800, 1200, 1600 ms), each attempt logged.
 - After that, the error is **fatal for the engine**: the service stops, the UI shows STOPPED plus a hint (turn off the other
   visualizer, or use source B). A RUNNING status without audio can no longer happen.
+
+---
+
+## Phase 4 — gestures (started while the owner is away from the PC)
+
+### D-032 · GestureRecognizer (core, 14 tests replaying the Phase 0 captures)
+This refines D-015 on one point: **HOLD_MEDIUM fires on release, HOLD_LONG fires at the 4 s crossing.** If both fired at
+their crossings, a 6 s hold would trigger play/pause *and then* now-playing. Now each crossing gives only *feedback*
+(`HOLD_MEDIUM_REACHED`: haptic tick plus a ring marker), and the action is unambiguous:
+- release before 2 s → tap (multi-press counting)
+- release between 2 and 4 s → HOLD_MEDIUM
+- reaching 4 s → HOLD_LONG immediately
+
+Other rules:
+- Multi-press window 600 ms from release to the next press. TRIPLE fires on the 3rd release without waiting.
+- A press that becomes a hold discards pending taps.
+- A press with no `change` (system short press) and an unbind mid-gesture both emit nothing (`CANCELLED` feedback).
+- Change-only fallback: if a `change` arrives without a preceding down, the recognizer counts changes and `supportsHolds = false`.
+- Pure logic with no clock: the toy feeds events and calls `advance(now)` every render frame. `holdProgress()` drives the ring.
