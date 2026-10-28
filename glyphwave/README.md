@@ -10,7 +10,7 @@ with media and visualizer controls on **long presses** of the Glyph Button.
 
 ## Build & install
 
-Requirements: JDK 17+, Android SDK (platform 36), a Nothing Phone (3) with USB or wireless debugging.
+Requirements: JDK 17+, Android SDK (platform 37), a Nothing Phone (3) with USB or wireless debugging.
 
 1. Get the Glyph Matrix SDK (not redistributable). See [`app/libs/README.md`](app/libs/README.md):
    ```bash

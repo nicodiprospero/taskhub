@@ -65,7 +65,7 @@ reference, so the formula can never drift from the diagram. The `RIM` pattern ve
 | Gradle | 9.8.2 | current release |
 | AGP | 9.2.0 | built-in Kotlin, so no `kotlin-android` plugin |
 | Kotlin | 2.4.21 | latest stable on Maven Central |
-| compileSdk / targetSdk | 36 | use 37 if your SDK Manager has the Android 17 platform installed: one line in `app/build.gradle.kts` |
+| compileSdk / targetSdk | 37 | first PC build: Compose 1.12 (BOM 2026.08.00) requires compileSdk ≥ 37 (D-014) |
 | minSdk | 34 | brief |
 | Compose BOM | 2026.08.00 | |
 | core-ktx 1.17.0, activity-compose 1.11.0, lifecycle 2.9.4, coroutines 1.11.0 | | versions known to exist. Google Maven can't be browsed from the dev container (D-002), so a version sweep is in Phase 6 |
@@ -109,6 +109,11 @@ com/android/build/gradle/api/BaseVariant`. The Kotlin plugin was loaded in the r
 `:core`) and AGP only in `:app`'s. AGP 9's built-in Kotlin calls into the Kotlin plugin, which could not see
 AGP classes. The fix: declare AGP `apply false` in the root `build.gradle.kts`. The core-only mode (D-002/D-003)
 switches to `core-only.gradle.kts` as root build file (`rootProject.buildFileName`), so it never resolves AGP.
+
+### D-014 · compileSdk / targetSdk 37
+The first full build failed in `checkDebugAarMetadata`: every Compose 1.12 artifact requires compileSdk ≥ 37.
+API 37 (Android 17) is the current stable platform, so both compileSdk and targetSdk moved to 37, as the brief
+asks for "latest stable". minSdk stays at 34.
 
 ---
 
